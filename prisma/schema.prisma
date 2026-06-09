@@ -1,0 +1,539 @@
+// World Cup Predictor 2026 — relational schema.
+//
+// LOCAL DEV uses SQLite (zero external services). The schema is written to be
+// Postgres-portable: no DB-level enums (String + Zod instead), no scalar-list
+// array columns (join tables / JSON-as-text instead). To deploy on Supabase:
+//   1. change `provider` below to "postgresql"
+//   2. uncomment `directUrl`
+//   3. set DATABASE_URL / DIRECT_URL in your environment
+//   4. run `prisma migrate deploy` (or `prisma db push`)
+//
+// String discriminator fields document their allowed values inline; the allowed
+// sets live in src/lib/enums.ts and are validated with Zod at the edges.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+  // For Supabase/Postgres, also set:
+  // directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Identity & league
+// ---------------------------------------------------------------------------
+
+/// Reserved for future per-participant login. The MVP authenticates the admin
+/// via a password env var; participants are selectable rows (no login yet).
+model User {
+  id            String       @id @default(uuid())
+  email         String?      @unique
+  role          String       @default("participant") // admin | participant
+  participant   Participant? @relation(fields: [participantId], references: [id])
+  participantId String?      @unique
+  createdAt     DateTime     @default(now())
+}
+
+model League {
+  id           String         @id @default(uuid())
+  name         String
+  season       String         @default("2026")
+  isActive     Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  participants Participant[]
+  members      LeagueMember[]
+}
+
+/// Forward-looking join for multi-league membership. The MVP uses
+/// Participant.leagueId directly; this table is here so leagues can grow later.
+model LeagueMember {
+  id            String   @id @default(uuid())
+  leagueId      String
+  league        League   @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  participantId String
+  role          String   @default("member") // member | admin
+  createdAt     DateTime @default(now())
+
+  @@unique([leagueId, participantId])
+}
+
+model Participant {
+  id            String   @id @default(uuid())
+  leagueId      String
+  league        League   @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  name          String
+  nickname      String?
+  initials      String
+  accentColor   String   @default("#10b981") // optional accent color
+  avatarId      String? // id into the fixed avatar library (src/lib/avatars.ts); null = initials fallback
+  favoriteTeamId String? // plain id, resolved via team map (no FK to keep schema lean)
+
+  // Per-participant login (open self-signup). `loginName` is the normalized,
+  // unique handle used to sign in; passwordHash is scrypt (salt:hash hex).
+  loginName    String?   @unique
+  passwordHash String?
+  lastLoginAt  DateTime?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user                 User?
+  matchPredictions     ParticipantMatchPrediction[]
+  groupPredictions     ParticipantGroupPrediction[]
+  knockoutPredictions  ParticipantKnockoutPrediction[]
+  tournamentPrediction ParticipantTournamentPrediction?
+  awardPredictions     ParticipantAwardPrediction[]
+  wildcards            Wildcard[]
+  pointTransactions    PointTransaction[]
+  adminAdjustments     AdminAdjustment[]
+
+  @@index([leagueId])
+}
+
+// ---------------------------------------------------------------------------
+// Tournament structure (teams / groups / venues / players / matches)
+// ---------------------------------------------------------------------------
+
+model Team {
+  id            String   @id @default(uuid())
+  name          String
+  shortName     String // 3-letter code, e.g. BRA
+  isoCode       String // ISO 3166-1 alpha-2 for flag rendering, e.g. br
+  confederation String? // UEFA | CONMEBOL | CONCACAF | CAF | AFC | OFC
+  isSample      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  groupMembers GroupMember[]
+  players      Player[]
+  homeMatches  Match[]       @relation("HomeTeam")
+  awayMatches  Match[]       @relation("AwayTeam")
+
+  @@unique([shortName])
+}
+
+model Group {
+  id         String   @id @default(uuid())
+  name       String // "Group A"
+  code       String   @unique // "A"
+  orderIndex Int
+
+  members          GroupMember[]
+  matches          Match[]
+  groupPredictions ParticipantGroupPrediction[]
+}
+
+model GroupMember {
+  id      String @id @default(uuid())
+  groupId String
+  group   Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  teamId  String
+  team    Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  slot    Int // 1..4 seeding slot within the group
+
+  @@unique([groupId, teamId])
+  @@unique([groupId, slot])
+}
+
+model Venue {
+  id       String  @id @default(uuid())
+  name     String // stadium
+  city     String
+  country  String
+  capacity Int?
+  matches  Match[]
+}
+
+model Player {
+  id          String  @id @default(uuid())
+  teamId      String
+  team        Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  name        String
+  position    String // GK | DEF | MID | FWD
+  shirtNumber Int?
+  isYoung     Boolean @default(false) // eligible for Best Young Player
+  isSample    Boolean @default(true)
+
+  events MatchEvent[]
+
+  @@index([teamId])
+}
+
+model Match {
+  id          String   @id @default(uuid())
+  matchNumber Int      @unique
+  stage       String // GROUP | R32 | R16 | QF | SF | THIRD_PLACE | FINAL
+  groupId     String?
+  group       Group?   @relation(fields: [groupId], references: [id])
+  venueId     String?
+  venue       Venue?   @relation(fields: [venueId], references: [id])
+  kickoff     DateTime
+
+  homeTeamId String?
+  homeTeam   Team?   @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeamId String?
+  awayTeam   Team?   @relation("AwayTeam", fields: [awayTeamId], references: [id])
+
+  // Knockout placeholders & bracket wiring (used until real teams are known).
+  homePlaceholder    String? // e.g. "Winner Group A", "Runner-up B", "Best 3rd (A/B/C)"
+  awayPlaceholder    String?
+  homeSourceMatchId  String? // bracket feeder match
+  awaySourceMatchId  String?
+  homeSourceType     String? // winner | loser
+  awaySourceType     String? // winner | loser
+
+  // Locking
+  status            String  @default("SCHEDULED") // SCHEDULED | LIVE | COMPLETED
+  manualLock        String? // LOCKED | OPEN | null (admin override of time-based lock)
+  lockBufferMinutes Int? // per-match override of the global buffer
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  result              MatchResult?
+  events              MatchEvent[]
+  matchPredictions    ParticipantMatchPrediction[]
+  knockoutPredictions ParticipantKnockoutPrediction[]
+  wildcards           Wildcard[]
+
+  @@index([stage])
+  @@index([groupId])
+  @@index([kickoff])
+}
+
+model MatchResult {
+  id      String @id @default(uuid())
+  matchId String @unique
+  match   Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  // Score after 90 minutes (always present once a result is entered).
+  ftHome Int
+  ftAway Int
+
+  // Optional knockout extensions.
+  wentToExtraTime Boolean @default(false)
+  aetHome         Int?
+  aetAway         Int?
+  wentToPenalties Boolean @default(false)
+  pensHome        Int?
+  pensAway        Int?
+
+  advancingTeamId String? // knockout winner (plain id, resolved via team map)
+  mvpPlayerId     String? // optional man of the match (plain id)
+
+  decisiveScore String   @default("FT") // FT | AET | PENS — which line decided the result
+  source        String   @default("ADMIN") // ADMIN | API | TEST — manual (ADMIN) always wins over sync
+  enteredAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// External API sync state (single source; never fetched per visitor)
+// ---------------------------------------------------------------------------
+
+model SyncState {
+  id              String    @id @default("default")
+  status          String    @default("NEVER") // NEVER | OK | FAILED | NOT_CONFIGURED | RUNNING | SKIPPED
+  lastSyncAt      DateTime?
+  lastSuccessAt   DateTime?
+  lastSummary     String?
+  lastError       String?
+  quotaRemaining  Int?
+  quotaLimit      Int?
+  nextScheduledAt DateTime?
+  updatedAt       DateTime  @updatedAt
+}
+
+model SyncLog {
+  id        String   @id @default(uuid())
+  status    String // OK | FAILED | SKIPPED | NOT_CONFIGURED
+  summary   String
+  error     String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+/// Goals, assists and cards are all modelled as typed match events.
+model MatchEvent {
+  id       String  @id @default(uuid())
+  matchId  String
+  match    Match   @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  type     String // GOAL | ASSIST | YELLOW | RED | OWN_GOAL | PENALTY_GOAL
+  teamId   String? // scoring/committing team (plain id)
+  playerId String?
+  player   Player? @relation(fields: [playerId], references: [id])
+  minute   Int?
+  // For an ASSIST event, the player who scored from it (plain id, optional).
+  relatedPlayerId String?
+
+  @@index([matchId])
+  @@index([type])
+}
+
+// ---------------------------------------------------------------------------
+// Predictions
+// ---------------------------------------------------------------------------
+
+model ParticipantMatchPrediction {
+  id            String      @id @default(uuid())
+  participantId String
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  matchId       String
+  match         Match       @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  homeGoals       Int?
+  awayGoals       Int?
+  predictedOutcome String? // HOME | AWAY | DRAW (derived from score, stored for convenience)
+
+  // Knockout-specific
+  advanceTeamId   String? // predicted team to advance (plain id)
+  predictExtraTime Boolean?
+  predictPenalties Boolean?
+  penaltyHome     Int?
+  penaltyAway     Int?
+
+  // Match-specific bonus predictions (all optional / collapsible in the UI)
+  firstTeamToScore String? // HOME | AWAY | NONE
+  bttsPrediction   Boolean? // both teams to score
+  cleanSheetPrediction Boolean?
+  totalGoalsRange  String? // range label, e.g. "2-3"
+  totalCardsRange  String? // range label
+  wildcardPick     String? // free-text bold "wildcard" note
+
+  submittedAt DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lockedAt    DateTime?
+
+  scorerPicks ParticipantMatchScorerPrediction[]
+
+  @@unique([participantId, matchId])
+  @@index([matchId])
+}
+
+model ParticipantMatchScorerPrediction {
+  id           String                     @id @default(uuid())
+  predictionId String
+  prediction   ParticipantMatchPrediction @relation(fields: [predictionId], references: [id], onDelete: Cascade)
+  playerId     String // plain id, resolved via player map
+  pickType     String // FIRST | ANYTIME | ASSIST
+
+  @@unique([predictionId, playerId, pickType])
+}
+
+model ParticipantGroupPrediction {
+  id            String      @id @default(uuid())
+  participantId String
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  groupId       String
+  group         Group       @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  teamId        String // plain id
+  predictedPosition Int // 1..4
+
+  submittedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([participantId, groupId, teamId])
+  @@unique([participantId, groupId, predictedPosition])
+}
+
+model ParticipantKnockoutPrediction {
+  id            String      @id @default(uuid())
+  participantId String
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  mode          String // PRE_TOURNAMENT | STAGE_BY_STAGE
+  round         String // R32 | R16 | QF | SF | THIRD_PLACE | FINAL | CHAMPION
+  slotCode      String? // pre-tournament bracket slot identifier
+  matchId       String? // stage-by-stage: the specific match
+  match         Match?      @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  teamId        String // predicted team (to reach round / to win match)
+
+  submittedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([participantId, mode, round, slotCode])
+  @@unique([participantId, mode, matchId])
+  @@index([participantId])
+}
+
+model ParticipantTournamentPrediction {
+  id            String      @id @default(uuid())
+  participantId String      @unique
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  championTeamId       String?
+  runnerUpTeamId       String?
+  thirdTeamId          String?
+  fourthTeamId         String?
+  surpriseTeamId       String?
+  disappointingTeamId  String?
+  highestScoringTeamId String?
+  bestDefensiveTeamId  String?
+
+  totalGoalsRange     String?
+  finalPenaltyShootout Boolean?
+  redCardRange        String?
+  hatTrickRange       String?
+
+  submittedAt DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lockedAt    DateTime?
+
+  teamPicks ParticipantTournamentTeamPick[]
+}
+
+model ParticipantTournamentTeamPick {
+  id           String                          @id @default(uuid())
+  predictionId String
+  prediction   ParticipantTournamentPrediction @relation(fields: [predictionId], references: [id], onDelete: Cascade)
+  category     String // SEMIFINALIST | QUARTERFINALIST | GROUP_WINNER | ADVANCING | BEST_THIRD
+  teamId       String
+  groupId      String? // context for GROUP_WINNER / ADVANCING
+
+  @@unique([predictionId, category, teamId])
+}
+
+model ParticipantAwardPrediction {
+  id            String      @id @default(uuid())
+  participantId String
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  awardType     String // GOLDEN_BOOT | TOP_ASSIST | MVP | BEST_YOUNG | BEST_GK | FIRST_HATTRICK | MOST_GOALS_MATCH | CUSTOM
+  playerId      String?
+  teamId        String?
+  value         String? // for ranges / custom awards
+  label         String? // for custom award name
+
+  submittedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([participantId, awardType])
+}
+
+// ---------------------------------------------------------------------------
+// Actual tournament-level results (group standings derive from match results)
+// ---------------------------------------------------------------------------
+
+/// Singleton row (id = "default") holding actual final standings & totals.
+model TournamentResult {
+  id                   String   @id @default("default")
+  championTeamId       String?
+  runnerUpTeamId       String?
+  thirdTeamId          String?
+  fourthTeamId         String?
+  surpriseTeamId       String?
+  disappointingTeamId  String?
+  highestScoringTeamId String?
+  bestDefensiveTeamId  String?
+  totalGoals           Int?
+  finalWentToPens      Boolean?
+  redCards             Int?
+  hatTricks            Int?
+  updatedAt            DateTime @updatedAt
+}
+
+model AwardResult {
+  id        String   @id @default(uuid())
+  awardType String   @unique // matches ParticipantAwardPrediction.awardType
+  playerId  String?
+  teamId    String?
+  value     String?
+  updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Scoring, transactions, adjustments, wildcards
+// ---------------------------------------------------------------------------
+
+/// Every point value & bonus toggle is a configurable rule. `value` is the
+/// point award; `enabled` toggles a bonus category on/off globally.
+model ScoringRule {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  category    String // MATCH | GROUP | KNOCKOUT_PRE | KNOCKOUT_STAGE | TOURNAMENT | AWARD | WILDCARD | SYSTEM
+  label       String
+  description String?
+  value       Int      @default(0)
+  enabled     Boolean  @default(true)
+  updatedAt   DateTime @updatedAt
+}
+
+/// Transparent, idempotent record of every auto-awarded point.
+/// `dedupeKey` guarantees a participant cannot be scored twice for the same
+/// thing. Recompute deletes the auto rows in a scope and re-inserts them.
+model PointTransaction {
+  id            String      @id @default(uuid())
+  participantId String
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  category      String // MATCH | GROUP | KNOCKOUT_PRE | KNOCKOUT_STAGE | TOURNAMENT | AWARD | WILDCARD
+  source        String // fine-grained rule key, e.g. MATCH_OUTCOME, SCORER_FIRST
+  points        Int
+  reason        String // human-readable explanation
+  matchId       String?
+  groupId       String?
+  refId         String? // generic reference (award type, slot, team, etc.)
+  dedupeKey     String   @unique
+  createdAt     DateTime @default(now())
+
+  @@index([participantId])
+  @@index([category])
+}
+
+/// Manual admin corrections, kept SEPARATE from auto points and never touched
+/// by recompute. Leaderboard total = sum(PointTransaction) + sum(AdminAdjustment).
+model AdminAdjustment {
+  id            String      @id @default(uuid())
+  participantId String
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  points        Int
+  reason        String
+  createdBy     String      @default("admin")
+  createdAt     DateTime    @default(now())
+}
+
+model Wildcard {
+  id            String   @id @default(uuid())
+  participantId String
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  matchId       String
+  match         Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+
+  @@unique([participantId, matchId])
+}
+
+// ---------------------------------------------------------------------------
+// Deadlines, settings, audit
+// ---------------------------------------------------------------------------
+
+model PredictionDeadline {
+  id           String    @id @default(uuid())
+  scope        String    @unique // TOURNAMENT | GROUP_STAGE | KO_R32 | KO_R16 | KO_QF | KO_SF | KO_FINAL
+  deadline     DateTime?
+  manualLocked Boolean   @default(false)
+  updatedAt    DateTime  @updatedAt
+}
+
+/// Singleton-style key/value settings (lock buffer, wildcard count, etc.).
+model AppSettings {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  actor     String   @default("admin")
+  action    String // CREATE | UPDATE | DELETE | LOCK | UNLOCK | RECOMPUTE | IMPORT | ADJUST
+  entity    String // table / domain name
+  entityId  String?
+  summary   String
+  before    String? // JSON text snapshot
+  after     String? // JSON text snapshot
+  createdAt DateTime @default(now())
+
+  @@index([entity])
+  @@index([createdAt])
+}

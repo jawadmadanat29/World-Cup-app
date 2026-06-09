@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsx *)",
+      "Bash(npx tsx -e ' *)",
+      "Bash(npm run *)",
+      "Bash(perl -0pi -e 's/ \\\\} as never\\\\\\);/ }\\);/g' src/lib/prediction-writes.ts)",
+      "Bash(npx prisma *)",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(pkill -f \"next-server\")",
+      "Bash(rm -rf .next)",
+      "Bash(curl -s -D - -o /tmp/me.html http://localhost:3000/me)",
+      "Read(//tmp/**)",
+      "Read(//private/tmp/**)",
+      "Bash(rm -rf src/app/admin/predictions)",
+      "Bash(rm -f src/actions/admin-predictions.ts)",
+      "Bash(npx vitest *)",
+      "Bash(npm test *)",
+      "Bash(git mv *)",
+      "Bash(mv \"src/app/\\(public\\)/me\" \"src/app/\\(public\\)/predictions\")",
+      "Bash(lsof -ti:3000)",
+      "Bash(xargs kill)",
+      "Bash(curl -s -o /dev/null -w \"\\\\nhomepage HTTP %{http_code}\\\\n\" http://localhost:3000/)",
+      "Bash(curl -s -o /dev/null -w \"homepage HTTP %{http_code}\\\\n\" http://localhost:3000/)",
+      "Bash(lsof -i:3000)",
+      "Bash(openssl rand *)",
+      "Bash(echo \"AUTH_SECRET=$\\(openssl rand -base64 32\\)\")",
+      "Bash(echo \"CRON_SECRET=$\\(openssl rand -base64 24\\)\")",
+      "Bash(git --version)",
+      "Bash(gh --version)",
+      "Bash(gh auth *)",
+      "Bash(brew --version)"
+    ]
+  }
+}

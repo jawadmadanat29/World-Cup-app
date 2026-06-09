@@ -1,0 +1,52 @@
+import Link from "next/link";
+import { redirect, notFound } from "next/navigation";
+import { getCurrentParticipantId } from "@/lib/auth";
+import { getMatchPrediction } from "@/lib/queries";
+import { PageHeader } from "@/components/domain/page-header";
+import { MatchPredictionForm } from "@/components/admin/match-prediction-form";
+import { saveMyMatchPrediction } from "@/actions/my-predictions";
+import { StatusBadge } from "@/components/domain/status-badge";
+import { STAGE_LABELS } from "@/lib/enums";
+import { formatKickoff } from "@/lib/format";
+
+export const dynamic = "force-dynamic";
+
+export default async function MyMatchPage({ params }: { params: Promise<{ matchId: string }> }) {
+  const pid = await getCurrentParticipantId();
+  if (!pid) redirect("/login");
+  const { matchId } = await params;
+  const data = await getMatchPrediction(pid, matchId);
+  if (!data) notFound();
+  const { match } = data;
+  const locked = data.lockState === "LOCKED" || data.lockState === "COMPLETED";
+  const stageLabel = match.stage === "GROUP" && match.groupCode ? `Group ${match.groupCode}` : STAGE_LABELS[match.stage as keyof typeof STAGE_LABELS] ?? match.stage;
+
+  return (
+    <div className="mx-auto max-w-2xl">
+      <Link href="/predictions?mode=match" className="text-sm text-muted-foreground hover:text-foreground">← Back to my matches</Link>
+      <PageHeader
+        className="mt-3"
+        eyebrow={`${stageLabel} · #${match.matchNumber} · ${formatKickoff(match.kickoff)}`}
+        title={`${match.home?.name ?? "TBD"} v ${match.away?.name ?? "TBD"}`}
+        actions={<StatusBadge state={data.lockState} />}
+      />
+      {locked && (
+        <div className="mb-4 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-muted-foreground">
+          This match is locked — your prediction is final and now visible to everyone.
+        </div>
+      )}
+      <MatchPredictionForm
+        action={saveMyMatchPrediction}
+        readOnly={locked}
+        participantId={pid}
+        match={{ id: match.id, isKnockout: match.isKnockout, home: match.home, away: match.away }}
+        homePlayers={data.homePlayers}
+        awayPlayers={data.awayPlayers}
+        lockState={data.lockState}
+        existing={data.existing}
+        wildcardApplied={data.wildcardApplied}
+        wildcardsRemaining={data.wildcardsRemaining}
+      />
+    </div>
+  );
+}

@@ -1,0 +1,1338 @@
+{
+  "generatedAt": "2026-05-31T21:52:33.828Z",
+  "source": "FIFA_World_Cup_2026.ics",
+  "teams": [
+    {
+      "name": "Mexico",
+      "shortName": "MEX",
+      "isoCode": "mx",
+      "confederation": "CONCACAF"
+    },
+    {
+      "name": "South Africa",
+      "shortName": "RSA",
+      "isoCode": "za",
+      "confederation": "CAF"
+    },
+    {
+      "name": "South Korea",
+      "shortName": "KOR",
+      "isoCode": "kr",
+      "confederation": "AFC"
+    },
+    {
+      "name": "Czechia",
+      "shortName": "CZE",
+      "isoCode": "cz",
+      "confederation": "UEFA"
+    },
+    {
+      "name": "Canada",
+      "shortName": "CAN",
+      "isoCode": "ca",
+      "confederation": "CONCACAF"
+    },
+    {
+      "name": "Bosnia & Herzegovina",
+      "shortName": "BIH",
+      "isoCode": "ba",
+      "confederation": "UEFA"
+    },
+    {
+      "name": "United States",
+      "shortName": "USA",
+      "isoCode": "us",
+      "confederation": "CONCACAF"
+    },
+    {
+      "name": "Paraguay",
+      "shortName": "PAR",
+      "isoCode": "py",
+      "confederation": "CONMEBOL"
+    },
+    {
+      "name": "Qatar",
+      "shortName": "QAT",
+      "isoCode": "qa",
+      "confederation": "AFC"
+    },
+    {
+      "name": "Switzerland",
+      "shortName": "SUI",
+      "isoCode": "ch",
+      "confederation": "UEFA"
+    },
+    {
+      "name": "Brazil",
+      "shortName": "BRA",
+      "isoCode": "br",
+      "confederation": "CONMEBOL"
+    },
+    {
+      "name": "Morocco",
+      "shortName": "MAR",
+      "isoCode": "ma",
+      "confederation": "CAF"
+    },
+    {
+      "name": "Haiti",
+      "shortName": "HAI",
+      "isoCode": "ht",
+      "confederation": "CONCACAF"
+    },
+    {
+      "name": "Scotland",
+      "shortName": "SCO",
+      "isoCode": "gb-sct",
+      "confederation": "UEFA"
+    },
+    {
+      "name": "Australia",
+      "shortName": "AUS",
+      "isoCode": "au",
+      "confederation": "AFC"
+    },
+    {
+      "name": "Türkiye",
+      "shortName": "TUR",
+      "isoCode": "tr",
+      "confederation": "UEFA"
+    },
+    {
+      "name": "Germany",
+      "shortName": "GER",
+      "isoCode": "de",
+      "confederation": "UEFA"
+    },
+    {
+      "name": "Curaçao",
+      "shortName": "CUW",
+      "isoCode": "cw",
+      "confederation": "CONCACAF"
+    },
+    {
+      "name": "Netherlands",
+      "shortName": "NED",
+      "isoCode": "nl",
+      "confederation": "UEFA"
+    },
+    {
+      "name": "Japan",
+      "shortName": "JPN",
+      "isoCode": "jp",
+      "confederation": "AFC"
+    },
+    {
+      "name": "Ivory Coast",
+      "shortName": "CIV",
+      "isoCode": "ci",
+      "confederation": "CAF"
+    },
+    {
+      "name": "Ecuador",
+      "shortName": "ECU",
+      "isoCode": "ec",
+      "confederation": "CONMEBOL"
+    },
+    {
+      "name": "Tunisia",
+      "shortName": "TUN",
+      "isoCode": "tn",
+      "confederation": "CAF"
+    },
+    {
+      "name": "Sweden",
+      "shortName": "SWE",
+      "isoCode": "se",
+      "confederation": "UEFA"
+    },
+    {
+      "name": "Spain",
+      "shortName": "ESP",
+      "isoCode": "es",
+      "confederation": "UEFA"
+    },
+    {
+      "name": "Cape Verde",
+      "shortName": "CPV",
+      "isoCode": "cv",
+      "confederation": "CAF"
+    },
+    {
+      "name": "Belgium",
+      "shortName": "BEL",
+      "isoCode": "be",
+      "confederation": "UEFA"
+    },
+    {
+      "name": "Egypt",
+      "shortName": "EGY",
+      "isoCode": "eg",
+      "confederation": "CAF"
+    },
+    {
+      "name": "Saudi Arabia",
+      "shortName": "KSA",
+      "isoCode": "sa",
+      "confederation": "AFC"
+    },
+    {
+      "name": "Uruguay",
+      "shortName": "URU",
+      "isoCode": "uy",
+      "confederation": "CONMEBOL"
+    },
+    {
+      "name": "Iran",
+      "shortName": "IRN",
+      "isoCode": "ir",
+      "confederation": "AFC"
+    },
+    {
+      "name": "New Zealand",
+      "shortName": "NZL",
+      "isoCode": "nz",
+      "confederation": "OFC"
+    },
+    {
+      "name": "France",
+      "shortName": "FRA",
+      "isoCode": "fr",
+      "confederation": "UEFA"
+    },
+    {
+      "name": "Senegal",
+      "shortName": "SEN",
+      "isoCode": "sn",
+      "confederation": "CAF"
+    },
+    {
+      "name": "Norway",
+      "shortName": "NOR",
+      "isoCode": "no",
+      "confederation": "UEFA"
+    },
+    {
+      "name": "Iraq",
+      "shortName": "IRQ",
+      "isoCode": "iq",
+      "confederation": "AFC"
+    },
+    {
+      "name": "Argentina",
+      "shortName": "ARG",
+      "isoCode": "ar",
+      "confederation": "CONMEBOL"
+    },
+    {
+      "name": "Algeria",
+      "shortName": "ALG",
+      "isoCode": "dz",
+      "confederation": "CAF"
+    },
+    {
+      "name": "Austria",
+      "shortName": "AUT",
+      "isoCode": "at",
+      "confederation": "UEFA"
+    },
+    {
+      "name": "Jordan",
+      "shortName": "JOR",
+      "isoCode": "jo",
+      "confederation": "AFC"
+    },
+    {
+      "name": "Portugal",
+      "shortName": "POR",
+      "isoCode": "pt",
+      "confederation": "UEFA"
+    },
+    {
+      "name": "DR Congo",
+      "shortName": "COD",
+      "isoCode": "cd",
+      "confederation": "CAF"
+    },
+    {
+      "name": "England",
+      "shortName": "ENG",
+      "isoCode": "gb-eng",
+      "confederation": "UEFA"
+    },
+    {
+      "name": "Croatia",
+      "shortName": "CRO",
+      "isoCode": "hr",
+      "confederation": "UEFA"
+    },
+    {
+      "name": "Ghana",
+      "shortName": "GHA",
+      "isoCode": "gh",
+      "confederation": "CAF"
+    },
+    {
+      "name": "Panama",
+      "shortName": "PAN",
+      "isoCode": "pa",
+      "confederation": "CONCACAF"
+    },
+    {
+      "name": "Uzbekistan",
+      "shortName": "UZB",
+      "isoCode": "uz",
+      "confederation": "AFC"
+    },
+    {
+      "name": "Colombia",
+      "shortName": "COL",
+      "isoCode": "co",
+      "confederation": "CONMEBOL"
+    }
+  ],
+  "groupLayout": {
+    "A": [
+      "MEX",
+      "RSA",
+      "KOR",
+      "CZE"
+    ],
+    "B": [
+      "CAN",
+      "BIH",
+      "QAT",
+      "SUI"
+    ],
+    "D": [
+      "USA",
+      "PAR",
+      "AUS",
+      "TUR"
+    ],
+    "C": [
+      "BRA",
+      "MAR",
+      "HAI",
+      "SCO"
+    ],
+    "E": [
+      "GER",
+      "CUW",
+      "CIV",
+      "ECU"
+    ],
+    "F": [
+      "NED",
+      "JPN",
+      "TUN",
+      "SWE"
+    ],
+    "H": [
+      "ESP",
+      "CPV",
+      "KSA",
+      "URU"
+    ],
+    "G": [
+      "BEL",
+      "EGY",
+      "IRN",
+      "NZL"
+    ],
+    "I": [
+      "FRA",
+      "SEN",
+      "NOR",
+      "IRQ"
+    ],
+    "J": [
+      "ARG",
+      "ALG",
+      "AUT",
+      "JOR"
+    ],
+    "K": [
+      "POR",
+      "COD",
+      "UZB",
+      "COL"
+    ],
+    "L": [
+      "ENG",
+      "CRO",
+      "GHA",
+      "PAN"
+    ]
+  },
+  "fixtures": [
+    {
+      "matchNumber": 1,
+      "stage": "GROUP",
+      "venueIndex": 13,
+      "kickoffISO": "2026-06-11T19:00:00Z",
+      "groupCode": "A",
+      "homeShort": "MEX",
+      "awayShort": "RSA"
+    },
+    {
+      "matchNumber": 2,
+      "stage": "GROUP",
+      "venueIndex": 14,
+      "kickoffISO": "2026-06-12T02:00:00Z",
+      "groupCode": "A",
+      "homeShort": "KOR",
+      "awayShort": "CZE"
+    },
+    {
+      "matchNumber": 3,
+      "stage": "GROUP",
+      "venueIndex": 11,
+      "kickoffISO": "2026-06-12T19:00:00Z",
+      "groupCode": "B",
+      "homeShort": "CAN",
+      "awayShort": "BIH"
+    },
+    {
+      "matchNumber": 4,
+      "stage": "GROUP",
+      "venueIndex": 1,
+      "kickoffISO": "2026-06-13T01:00:00Z",
+      "groupCode": "D",
+      "homeShort": "USA",
+      "awayShort": "PAR"
+    },
+    {
+      "matchNumber": 5,
+      "stage": "GROUP",
+      "venueIndex": 8,
+      "kickoffISO": "2026-06-13T19:00:00Z",
+      "groupCode": "B",
+      "homeShort": "QAT",
+      "awayShort": "SUI"
+    },
+    {
+      "matchNumber": 6,
+      "stage": "GROUP",
+      "venueIndex": 0,
+      "kickoffISO": "2026-06-13T22:00:00Z",
+      "groupCode": "C",
+      "homeShort": "BRA",
+      "awayShort": "MAR"
+    },
+    {
+      "matchNumber": 7,
+      "stage": "GROUP",
+      "venueIndex": 6,
+      "kickoffISO": "2026-06-14T01:00:00Z",
+      "groupCode": "C",
+      "homeShort": "HAI",
+      "awayShort": "SCO"
+    },
+    {
+      "matchNumber": 8,
+      "stage": "GROUP",
+      "venueIndex": 12,
+      "kickoffISO": "2026-06-14T04:00:00Z",
+      "groupCode": "D",
+      "homeShort": "AUS",
+      "awayShort": "TUR"
+    },
+    {
+      "matchNumber": 9,
+      "stage": "GROUP",
+      "venueIndex": 3,
+      "kickoffISO": "2026-06-14T17:00:00Z",
+      "groupCode": "E",
+      "homeShort": "GER",
+      "awayShort": "CUW"
+    },
+    {
+      "matchNumber": 10,
+      "stage": "GROUP",
+      "venueIndex": 2,
+      "kickoffISO": "2026-06-14T20:00:00Z",
+      "groupCode": "F",
+      "homeShort": "NED",
+      "awayShort": "JPN"
+    },
+    {
+      "matchNumber": 11,
+      "stage": "GROUP",
+      "venueIndex": 5,
+      "kickoffISO": "2026-06-14T23:00:00Z",
+      "groupCode": "E",
+      "homeShort": "CIV",
+      "awayShort": "ECU"
+    },
+    {
+      "matchNumber": 12,
+      "stage": "GROUP",
+      "venueIndex": 15,
+      "kickoffISO": "2026-06-15T04:00:00Z",
+      "groupCode": "F",
+      "homeShort": "TUN",
+      "awayShort": "SWE"
+    },
+    {
+      "matchNumber": 13,
+      "stage": "GROUP",
+      "venueIndex": 4,
+      "kickoffISO": "2026-06-15T16:00:00Z",
+      "groupCode": "H",
+      "homeShort": "ESP",
+      "awayShort": "CPV"
+    },
+    {
+      "matchNumber": 14,
+      "stage": "GROUP",
+      "venueIndex": 7,
+      "kickoffISO": "2026-06-15T19:00:00Z",
+      "groupCode": "G",
+      "homeShort": "BEL",
+      "awayShort": "EGY"
+    },
+    {
+      "matchNumber": 15,
+      "stage": "GROUP",
+      "venueIndex": 10,
+      "kickoffISO": "2026-06-15T22:00:00Z",
+      "groupCode": "H",
+      "homeShort": "KSA",
+      "awayShort": "URU"
+    },
+    {
+      "matchNumber": 16,
+      "stage": "GROUP",
+      "venueIndex": 1,
+      "kickoffISO": "2026-06-16T01:00:00Z",
+      "groupCode": "G",
+      "homeShort": "IRN",
+      "awayShort": "NZL"
+    },
+    {
+      "matchNumber": 17,
+      "stage": "GROUP",
+      "venueIndex": 0,
+      "kickoffISO": "2026-06-16T19:00:00Z",
+      "groupCode": "I",
+      "homeShort": "FRA",
+      "awayShort": "SEN"
+    },
+    {
+      "matchNumber": 18,
+      "stage": "GROUP",
+      "venueIndex": 6,
+      "kickoffISO": "2026-06-16T22:00:00Z",
+      "groupCode": "I",
+      "homeShort": "NOR",
+      "awayShort": "IRQ"
+    },
+    {
+      "matchNumber": 19,
+      "stage": "GROUP",
+      "venueIndex": 9,
+      "kickoffISO": "2026-06-17T01:00:00Z",
+      "groupCode": "J",
+      "homeShort": "ARG",
+      "awayShort": "ALG"
+    },
+    {
+      "matchNumber": 20,
+      "stage": "GROUP",
+      "venueIndex": 8,
+      "kickoffISO": "2026-06-17T04:00:00Z",
+      "groupCode": "J",
+      "homeShort": "AUT",
+      "awayShort": "JOR"
+    },
+    {
+      "matchNumber": 21,
+      "stage": "GROUP",
+      "venueIndex": 3,
+      "kickoffISO": "2026-06-17T17:00:00Z",
+      "groupCode": "K",
+      "homeShort": "POR",
+      "awayShort": "COD"
+    },
+    {
+      "matchNumber": 22,
+      "stage": "GROUP",
+      "venueIndex": 2,
+      "kickoffISO": "2026-06-17T20:00:00Z",
+      "groupCode": "L",
+      "homeShort": "ENG",
+      "awayShort": "CRO"
+    },
+    {
+      "matchNumber": 23,
+      "stage": "GROUP",
+      "venueIndex": 11,
+      "kickoffISO": "2026-06-17T23:00:00Z",
+      "groupCode": "L",
+      "homeShort": "GHA",
+      "awayShort": "PAN"
+    },
+    {
+      "matchNumber": 24,
+      "stage": "GROUP",
+      "venueIndex": 13,
+      "kickoffISO": "2026-06-18T02:00:00Z",
+      "groupCode": "K",
+      "homeShort": "UZB",
+      "awayShort": "COL"
+    },
+    {
+      "matchNumber": 25,
+      "stage": "GROUP",
+      "venueIndex": 4,
+      "kickoffISO": "2026-06-18T16:00:00Z",
+      "groupCode": "A",
+      "homeShort": "RSA",
+      "awayShort": "CZE"
+    },
+    {
+      "matchNumber": 26,
+      "stage": "GROUP",
+      "venueIndex": 1,
+      "kickoffISO": "2026-06-18T19:00:00Z",
+      "groupCode": "B",
+      "homeShort": "SUI",
+      "awayShort": "BIH"
+    },
+    {
+      "matchNumber": 27,
+      "stage": "GROUP",
+      "venueIndex": 12,
+      "kickoffISO": "2026-06-18T22:00:00Z",
+      "groupCode": "B",
+      "homeShort": "CAN",
+      "awayShort": "QAT"
+    },
+    {
+      "matchNumber": 28,
+      "stage": "GROUP",
+      "venueIndex": 14,
+      "kickoffISO": "2026-06-19T01:00:00Z",
+      "groupCode": "A",
+      "homeShort": "MEX",
+      "awayShort": "KOR"
+    },
+    {
+      "matchNumber": 29,
+      "stage": "GROUP",
+      "venueIndex": 7,
+      "kickoffISO": "2026-06-19T19:00:00Z",
+      "groupCode": "D",
+      "homeShort": "USA",
+      "awayShort": "AUS"
+    },
+    {
+      "matchNumber": 30,
+      "stage": "GROUP",
+      "venueIndex": 6,
+      "kickoffISO": "2026-06-19T22:00:00Z",
+      "groupCode": "C",
+      "homeShort": "SCO",
+      "awayShort": "MAR"
+    },
+    {
+      "matchNumber": 31,
+      "stage": "GROUP",
+      "venueIndex": 5,
+      "kickoffISO": "2026-06-20T01:00:00Z",
+      "groupCode": "C",
+      "homeShort": "BRA",
+      "awayShort": "HAI"
+    },
+    {
+      "matchNumber": 32,
+      "stage": "GROUP",
+      "venueIndex": 8,
+      "kickoffISO": "2026-06-20T04:00:00Z",
+      "groupCode": "D",
+      "homeShort": "PAR",
+      "awayShort": "TUR"
+    },
+    {
+      "matchNumber": 33,
+      "stage": "GROUP",
+      "venueIndex": 3,
+      "kickoffISO": "2026-06-20T17:00:00Z",
+      "groupCode": "F",
+      "homeShort": "NED",
+      "awayShort": "SWE"
+    },
+    {
+      "matchNumber": 34,
+      "stage": "GROUP",
+      "venueIndex": 11,
+      "kickoffISO": "2026-06-20T20:00:00Z",
+      "groupCode": "E",
+      "homeShort": "GER",
+      "awayShort": "CIV"
+    },
+    {
+      "matchNumber": 35,
+      "stage": "GROUP",
+      "venueIndex": 9,
+      "kickoffISO": "2026-06-21T00:00:00Z",
+      "groupCode": "E",
+      "homeShort": "ECU",
+      "awayShort": "CUW"
+    },
+    {
+      "matchNumber": 36,
+      "stage": "GROUP",
+      "venueIndex": 15,
+      "kickoffISO": "2026-06-21T04:00:00Z",
+      "groupCode": "F",
+      "homeShort": "TUN",
+      "awayShort": "JPN"
+    },
+    {
+      "matchNumber": 37,
+      "stage": "GROUP",
+      "venueIndex": 4,
+      "kickoffISO": "2026-06-21T16:00:00Z",
+      "groupCode": "H",
+      "homeShort": "ESP",
+      "awayShort": "KSA"
+    },
+    {
+      "matchNumber": 38,
+      "stage": "GROUP",
+      "venueIndex": 1,
+      "kickoffISO": "2026-06-21T19:00:00Z",
+      "groupCode": "G",
+      "homeShort": "BEL",
+      "awayShort": "IRN"
+    },
+    {
+      "matchNumber": 39,
+      "stage": "GROUP",
+      "venueIndex": 10,
+      "kickoffISO": "2026-06-21T22:00:00Z",
+      "groupCode": "H",
+      "homeShort": "URU",
+      "awayShort": "CPV"
+    },
+    {
+      "matchNumber": 40,
+      "stage": "GROUP",
+      "venueIndex": 12,
+      "kickoffISO": "2026-06-22T01:00:00Z",
+      "groupCode": "G",
+      "homeShort": "NZL",
+      "awayShort": "EGY"
+    },
+    {
+      "matchNumber": 41,
+      "stage": "GROUP",
+      "venueIndex": 2,
+      "kickoffISO": "2026-06-22T17:00:00Z",
+      "groupCode": "J",
+      "homeShort": "ARG",
+      "awayShort": "AUT"
+    },
+    {
+      "matchNumber": 42,
+      "stage": "GROUP",
+      "venueIndex": 5,
+      "kickoffISO": "2026-06-22T21:00:00Z",
+      "groupCode": "I",
+      "homeShort": "FRA",
+      "awayShort": "IRQ"
+    },
+    {
+      "matchNumber": 43,
+      "stage": "GROUP",
+      "venueIndex": 0,
+      "kickoffISO": "2026-06-23T00:00:00Z",
+      "groupCode": "I",
+      "homeShort": "NOR",
+      "awayShort": "SEN"
+    },
+    {
+      "matchNumber": 44,
+      "stage": "GROUP",
+      "venueIndex": 8,
+      "kickoffISO": "2026-06-23T04:00:00Z",
+      "groupCode": "J",
+      "homeShort": "JOR",
+      "awayShort": "ALG"
+    },
+    {
+      "matchNumber": 45,
+      "stage": "GROUP",
+      "venueIndex": 3,
+      "kickoffISO": "2026-06-23T17:00:00Z",
+      "groupCode": "K",
+      "homeShort": "POR",
+      "awayShort": "UZB"
+    },
+    {
+      "matchNumber": 46,
+      "stage": "GROUP",
+      "venueIndex": 6,
+      "kickoffISO": "2026-06-23T20:00:00Z",
+      "groupCode": "L",
+      "homeShort": "ENG",
+      "awayShort": "GHA"
+    },
+    {
+      "matchNumber": 47,
+      "stage": "GROUP",
+      "venueIndex": 11,
+      "kickoffISO": "2026-06-23T23:00:00Z",
+      "groupCode": "L",
+      "homeShort": "PAN",
+      "awayShort": "CRO"
+    },
+    {
+      "matchNumber": 48,
+      "stage": "GROUP",
+      "venueIndex": 14,
+      "kickoffISO": "2026-06-24T02:00:00Z",
+      "groupCode": "K",
+      "homeShort": "COL",
+      "awayShort": "COD"
+    },
+    {
+      "matchNumber": 49,
+      "stage": "GROUP",
+      "venueIndex": 12,
+      "kickoffISO": "2026-06-24T19:00:00Z",
+      "groupCode": "B",
+      "homeShort": "CAN",
+      "awayShort": "SUI"
+    },
+    {
+      "matchNumber": 50,
+      "stage": "GROUP",
+      "venueIndex": 7,
+      "kickoffISO": "2026-06-24T19:00:00Z",
+      "groupCode": "B",
+      "homeShort": "QAT",
+      "awayShort": "BIH"
+    },
+    {
+      "matchNumber": 51,
+      "stage": "GROUP",
+      "venueIndex": 10,
+      "kickoffISO": "2026-06-24T22:00:00Z",
+      "groupCode": "C",
+      "homeShort": "SCO",
+      "awayShort": "BRA"
+    },
+    {
+      "matchNumber": 52,
+      "stage": "GROUP",
+      "venueIndex": 4,
+      "kickoffISO": "2026-06-24T22:00:00Z",
+      "groupCode": "C",
+      "homeShort": "MAR",
+      "awayShort": "HAI"
+    },
+    {
+      "matchNumber": 53,
+      "stage": "GROUP",
+      "venueIndex": 13,
+      "kickoffISO": "2026-06-25T01:00:00Z",
+      "groupCode": "A",
+      "homeShort": "MEX",
+      "awayShort": "CZE"
+    },
+    {
+      "matchNumber": 54,
+      "stage": "GROUP",
+      "venueIndex": 15,
+      "kickoffISO": "2026-06-25T01:00:00Z",
+      "groupCode": "A",
+      "homeShort": "KOR",
+      "awayShort": "RSA"
+    },
+    {
+      "matchNumber": 55,
+      "stage": "GROUP",
+      "venueIndex": 0,
+      "kickoffISO": "2026-06-25T20:00:00Z",
+      "groupCode": "E",
+      "homeShort": "ECU",
+      "awayShort": "GER"
+    },
+    {
+      "matchNumber": 56,
+      "stage": "GROUP",
+      "venueIndex": 5,
+      "kickoffISO": "2026-06-25T20:00:00Z",
+      "groupCode": "E",
+      "homeShort": "CUW",
+      "awayShort": "CIV"
+    },
+    {
+      "matchNumber": 57,
+      "stage": "GROUP",
+      "venueIndex": 9,
+      "kickoffISO": "2026-06-25T23:00:00Z",
+      "groupCode": "F",
+      "homeShort": "TUN",
+      "awayShort": "NED"
+    },
+    {
+      "matchNumber": 58,
+      "stage": "GROUP",
+      "venueIndex": 2,
+      "kickoffISO": "2026-06-25T23:00:00Z",
+      "groupCode": "F",
+      "homeShort": "JPN",
+      "awayShort": "SWE"
+    },
+    {
+      "matchNumber": 59,
+      "stage": "GROUP",
+      "venueIndex": 1,
+      "kickoffISO": "2026-06-26T02:00:00Z",
+      "groupCode": "D",
+      "homeShort": "USA",
+      "awayShort": "TUR"
+    },
+    {
+      "matchNumber": 60,
+      "stage": "GROUP",
+      "venueIndex": 8,
+      "kickoffISO": "2026-06-26T02:00:00Z",
+      "groupCode": "D",
+      "homeShort": "PAR",
+      "awayShort": "AUS"
+    },
+    {
+      "matchNumber": 61,
+      "stage": "GROUP",
+      "venueIndex": 6,
+      "kickoffISO": "2026-06-26T19:00:00Z",
+      "groupCode": "I",
+      "homeShort": "NOR",
+      "awayShort": "FRA"
+    },
+    {
+      "matchNumber": 62,
+      "stage": "GROUP",
+      "venueIndex": 11,
+      "kickoffISO": "2026-06-26T19:00:00Z",
+      "groupCode": "I",
+      "homeShort": "SEN",
+      "awayShort": "IRQ"
+    },
+    {
+      "matchNumber": 63,
+      "stage": "GROUP",
+      "venueIndex": 14,
+      "kickoffISO": "2026-06-27T00:00:00Z",
+      "groupCode": "H",
+      "homeShort": "URU",
+      "awayShort": "ESP"
+    },
+    {
+      "matchNumber": 64,
+      "stage": "GROUP",
+      "venueIndex": 3,
+      "kickoffISO": "2026-06-27T00:00:00Z",
+      "groupCode": "H",
+      "homeShort": "CPV",
+      "awayShort": "KSA"
+    },
+    {
+      "matchNumber": 65,
+      "stage": "GROUP",
+      "venueIndex": 12,
+      "kickoffISO": "2026-06-27T04:00:00Z",
+      "groupCode": "G",
+      "homeShort": "NZL",
+      "awayShort": "BEL"
+    },
+    {
+      "matchNumber": 66,
+      "stage": "GROUP",
+      "venueIndex": 7,
+      "kickoffISO": "2026-06-27T04:00:00Z",
+      "groupCode": "G",
+      "homeShort": "EGY",
+      "awayShort": "IRN"
+    },
+    {
+      "matchNumber": 67,
+      "stage": "GROUP",
+      "venueIndex": 0,
+      "kickoffISO": "2026-06-27T21:00:00Z",
+      "groupCode": "L",
+      "homeShort": "PAN",
+      "awayShort": "ENG"
+    },
+    {
+      "matchNumber": 68,
+      "stage": "GROUP",
+      "venueIndex": 5,
+      "kickoffISO": "2026-06-27T21:00:00Z",
+      "groupCode": "L",
+      "homeShort": "CRO",
+      "awayShort": "GHA"
+    },
+    {
+      "matchNumber": 69,
+      "stage": "GROUP",
+      "venueIndex": 10,
+      "kickoffISO": "2026-06-27T23:30:00Z",
+      "groupCode": "K",
+      "homeShort": "COL",
+      "awayShort": "POR"
+    },
+    {
+      "matchNumber": 70,
+      "stage": "GROUP",
+      "venueIndex": 4,
+      "kickoffISO": "2026-06-27T23:30:00Z",
+      "groupCode": "K",
+      "homeShort": "UZB",
+      "awayShort": "COD"
+    },
+    {
+      "matchNumber": 71,
+      "stage": "GROUP",
+      "venueIndex": 2,
+      "kickoffISO": "2026-06-28T02:00:00Z",
+      "groupCode": "J",
+      "homeShort": "JOR",
+      "awayShort": "ARG"
+    },
+    {
+      "matchNumber": 72,
+      "stage": "GROUP",
+      "venueIndex": 9,
+      "kickoffISO": "2026-06-28T02:00:00Z",
+      "groupCode": "J",
+      "homeShort": "ALG",
+      "awayShort": "AUT"
+    },
+    {
+      "matchNumber": 73,
+      "stage": "R32",
+      "venueIndex": 1,
+      "kickoffISO": "2026-06-28T19:00:00Z",
+      "homePlaceholder": "Runner-up A",
+      "awayPlaceholder": "Runner-up B"
+    },
+    {
+      "matchNumber": 74,
+      "stage": "R32",
+      "venueIndex": 6,
+      "kickoffISO": "2026-06-29T20:30:00Z",
+      "homePlaceholder": "Winner E",
+      "awayPlaceholder": "3rd Place"
+    },
+    {
+      "matchNumber": 75,
+      "stage": "R32",
+      "venueIndex": 15,
+      "kickoffISO": "2026-06-30T01:00:00Z",
+      "homePlaceholder": "Winner F",
+      "awayPlaceholder": "Runner-up C"
+    },
+    {
+      "matchNumber": 76,
+      "stage": "R32",
+      "venueIndex": 3,
+      "kickoffISO": "2026-06-29T17:00:00Z",
+      "homePlaceholder": "Winner C",
+      "awayPlaceholder": "Runner-up F"
+    },
+    {
+      "matchNumber": 77,
+      "stage": "R32",
+      "venueIndex": 0,
+      "kickoffISO": "2026-06-30T21:00:00Z",
+      "homePlaceholder": "Winner I",
+      "awayPlaceholder": "3rd Place"
+    },
+    {
+      "matchNumber": 78,
+      "stage": "R32",
+      "venueIndex": 2,
+      "kickoffISO": "2026-06-30T17:00:00Z",
+      "homePlaceholder": "Runner-up E",
+      "awayPlaceholder": "Runner-up I"
+    },
+    {
+      "matchNumber": 79,
+      "stage": "R32",
+      "venueIndex": 13,
+      "kickoffISO": "2026-07-01T01:00:00Z",
+      "homePlaceholder": "Winner A",
+      "awayPlaceholder": "3rd Place"
+    },
+    {
+      "matchNumber": 80,
+      "stage": "R32",
+      "venueIndex": 4,
+      "kickoffISO": "2026-07-01T16:00:00Z",
+      "homePlaceholder": "Winner L",
+      "awayPlaceholder": "3rd Place"
+    },
+    {
+      "matchNumber": 81,
+      "stage": "R32",
+      "venueIndex": 8,
+      "kickoffISO": "2026-07-02T00:00:00Z",
+      "homePlaceholder": "Winner D",
+      "awayPlaceholder": "3rd Place"
+    },
+    {
+      "matchNumber": 82,
+      "stage": "R32",
+      "venueIndex": 7,
+      "kickoffISO": "2026-07-01T20:00:00Z",
+      "homePlaceholder": "Winner G",
+      "awayPlaceholder": "3rd Place"
+    },
+    {
+      "matchNumber": 83,
+      "stage": "R32",
+      "venueIndex": 11,
+      "kickoffISO": "2026-07-02T23:00:00Z",
+      "homePlaceholder": "Runner-up K",
+      "awayPlaceholder": "Runner-up L"
+    },
+    {
+      "matchNumber": 84,
+      "stage": "R32",
+      "venueIndex": 1,
+      "kickoffISO": "2026-07-02T19:00:00Z",
+      "homePlaceholder": "Winner H",
+      "awayPlaceholder": "Runner-up J"
+    },
+    {
+      "matchNumber": 85,
+      "stage": "R32",
+      "venueIndex": 12,
+      "kickoffISO": "2026-07-03T03:00:00Z",
+      "homePlaceholder": "Winner B",
+      "awayPlaceholder": "3rd Place"
+    },
+    {
+      "matchNumber": 86,
+      "stage": "R32",
+      "venueIndex": 10,
+      "kickoffISO": "2026-07-03T22:00:00Z",
+      "homePlaceholder": "Winner J",
+      "awayPlaceholder": "Runner-up H"
+    },
+    {
+      "matchNumber": 87,
+      "stage": "R32",
+      "venueIndex": 9,
+      "kickoffISO": "2026-07-04T01:30:00Z",
+      "homePlaceholder": "Winner K",
+      "awayPlaceholder": "3rd Place"
+    },
+    {
+      "matchNumber": 88,
+      "stage": "R32",
+      "venueIndex": 2,
+      "kickoffISO": "2026-07-03T18:00:00Z",
+      "homePlaceholder": "Runner-up D",
+      "awayPlaceholder": "Runner-up G"
+    },
+    {
+      "matchNumber": 89,
+      "stage": "R16",
+      "venueIndex": 5,
+      "kickoffISO": "2026-07-04T21:00:00Z",
+      "homeSourceMatchNumber": 73,
+      "awaySourceMatchNumber": 74,
+      "homeSourceType": "winner",
+      "awaySourceType": "winner",
+      "homePlaceholder": "Winner Match 73",
+      "awayPlaceholder": "Winner Match 74"
+    },
+    {
+      "matchNumber": 90,
+      "stage": "R16",
+      "venueIndex": 3,
+      "kickoffISO": "2026-07-04T17:00:00Z",
+      "homeSourceMatchNumber": 75,
+      "awaySourceMatchNumber": 76,
+      "homeSourceType": "winner",
+      "awaySourceType": "winner",
+      "homePlaceholder": "Winner Match 75",
+      "awayPlaceholder": "Winner Match 76"
+    },
+    {
+      "matchNumber": 91,
+      "stage": "R16",
+      "venueIndex": 0,
+      "kickoffISO": "2026-07-05T20:00:00Z",
+      "homeSourceMatchNumber": 77,
+      "awaySourceMatchNumber": 78,
+      "homeSourceType": "winner",
+      "awaySourceType": "winner",
+      "homePlaceholder": "Winner Match 77",
+      "awayPlaceholder": "Winner Match 78"
+    },
+    {
+      "matchNumber": 92,
+      "stage": "R16",
+      "venueIndex": 13,
+      "kickoffISO": "2026-07-06T00:00:00Z",
+      "homeSourceMatchNumber": 79,
+      "awaySourceMatchNumber": 80,
+      "homeSourceType": "winner",
+      "awaySourceType": "winner",
+      "homePlaceholder": "Winner Match 79",
+      "awayPlaceholder": "Winner Match 80"
+    },
+    {
+      "matchNumber": 93,
+      "stage": "R16",
+      "venueIndex": 2,
+      "kickoffISO": "2026-07-06T19:00:00Z",
+      "homeSourceMatchNumber": 81,
+      "awaySourceMatchNumber": 82,
+      "homeSourceType": "winner",
+      "awaySourceType": "winner",
+      "homePlaceholder": "Winner Match 81",
+      "awayPlaceholder": "Winner Match 82"
+    },
+    {
+      "matchNumber": 94,
+      "stage": "R16",
+      "venueIndex": 7,
+      "kickoffISO": "2026-07-07T00:00:00Z",
+      "homeSourceMatchNumber": 83,
+      "awaySourceMatchNumber": 84,
+      "homeSourceType": "winner",
+      "awaySourceType": "winner",
+      "homePlaceholder": "Winner Match 83",
+      "awayPlaceholder": "Winner Match 84"
+    },
+    {
+      "matchNumber": 95,
+      "stage": "R16",
+      "venueIndex": 4,
+      "kickoffISO": "2026-07-07T16:00:00Z",
+      "homeSourceMatchNumber": 85,
+      "awaySourceMatchNumber": 86,
+      "homeSourceType": "winner",
+      "awaySourceType": "winner",
+      "homePlaceholder": "Winner Match 85",
+      "awayPlaceholder": "Winner Match 86"
+    },
+    {
+      "matchNumber": 96,
+      "stage": "R16",
+      "venueIndex": 12,
+      "kickoffISO": "2026-07-07T20:00:00Z",
+      "homeSourceMatchNumber": 87,
+      "awaySourceMatchNumber": 88,
+      "homeSourceType": "winner",
+      "awaySourceType": "winner",
+      "homePlaceholder": "Winner Match 87",
+      "awayPlaceholder": "Winner Match 88"
+    },
+    {
+      "matchNumber": 97,
+      "stage": "QF",
+      "venueIndex": 6,
+      "kickoffISO": "2026-07-09T20:00:00Z",
+      "homeSourceMatchNumber": 89,
+      "awaySourceMatchNumber": 90,
+      "homeSourceType": "winner",
+      "awaySourceType": "winner",
+      "homePlaceholder": "Winner Match 89",
+      "awayPlaceholder": "Winner Match 90"
+    },
+    {
+      "matchNumber": 98,
+      "stage": "QF",
+      "venueIndex": 1,
+      "kickoffISO": "2026-07-10T19:00:00Z",
+      "homeSourceMatchNumber": 91,
+      "awaySourceMatchNumber": 92,
+      "homeSourceType": "winner",
+      "awaySourceType": "winner",
+      "homePlaceholder": "Winner Match 91",
+      "awayPlaceholder": "Winner Match 92"
+    },
+    {
+      "matchNumber": 99,
+      "stage": "QF",
+      "venueIndex": 10,
+      "kickoffISO": "2026-07-11T21:00:00Z",
+      "homeSourceMatchNumber": 93,
+      "awaySourceMatchNumber": 94,
+      "homeSourceType": "winner",
+      "awaySourceType": "winner",
+      "homePlaceholder": "Winner Match 93",
+      "awayPlaceholder": "Winner Match 94"
+    },
+    {
+      "matchNumber": 100,
+      "stage": "QF",
+      "venueIndex": 9,
+      "kickoffISO": "2026-07-12T01:00:00Z",
+      "homeSourceMatchNumber": 95,
+      "awaySourceMatchNumber": 96,
+      "homeSourceType": "winner",
+      "awaySourceType": "winner",
+      "homePlaceholder": "Winner Match 95",
+      "awayPlaceholder": "Winner Match 96"
+    },
+    {
+      "matchNumber": 101,
+      "stage": "SF",
+      "venueIndex": 2,
+      "kickoffISO": "2026-07-14T19:00:00Z",
+      "homeSourceMatchNumber": 97,
+      "awaySourceMatchNumber": 98,
+      "homeSourceType": "winner",
+      "awaySourceType": "winner",
+      "homePlaceholder": "Winner Match 97",
+      "awayPlaceholder": "Winner Match 98"
+    },
+    {
+      "matchNumber": 102,
+      "stage": "SF",
+      "venueIndex": 4,
+      "kickoffISO": "2026-07-15T19:00:00Z",
+      "homeSourceMatchNumber": 99,
+      "awaySourceMatchNumber": 100,
+      "homeSourceType": "winner",
+      "awaySourceType": "winner",
+      "homePlaceholder": "Winner Match 99",
+      "awayPlaceholder": "Winner Match 100"
+    },
+    {
+      "matchNumber": 103,
+      "stage": "THIRD_PLACE",
+      "venueIndex": 10,
+      "kickoffISO": "2026-07-18T21:00:00Z",
+      "homeSourceMatchNumber": 101,
+      "awaySourceMatchNumber": 102,
+      "homeSourceType": "loser",
+      "awaySourceType": "loser",
+      "homePlaceholder": "Loser Match 101",
+      "awayPlaceholder": "Loser Match 102"
+    },
+    {
+      "matchNumber": 104,
+      "stage": "FINAL",
+      "venueIndex": 0,
+      "kickoffISO": "2026-07-19T19:00:00Z",
+      "homeSourceMatchNumber": 101,
+      "awaySourceMatchNumber": 102,
+      "homeSourceType": "winner",
+      "awaySourceType": "winner",
+      "homePlaceholder": "Winner Match 101",
+      "awayPlaceholder": "Winner Match 102"
+    }
+  ]
+}

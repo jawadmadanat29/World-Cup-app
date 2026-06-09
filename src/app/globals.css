@@ -1,0 +1,143 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  World Cup Predictor 2026 — theme tokens.
+  Dark navy is the DEFAULT (see next-themes defaultTheme="dark"); light mode is a
+  genuine, accessible alternative. Flat surfaces, no gradients, no glass.
+*/
+
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 158 64% 36%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 20% 94%;
+    --secondary-foreground: 222 47% 18%;
+
+    --muted: 210 20% 94%;
+    --muted-foreground: 215 16% 42%;
+
+    --accent: 210 20% 93%;
+    --accent-foreground: 222 47% 18%;
+
+    --destructive: 0 72% 48%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 32% 91%;
+    --input: 214 28% 88%;
+    --ring: 158 64% 36%;
+
+    --gold: 38 92% 42%;
+    --gold-foreground: 0 0% 100%;
+
+    --teal: 184 70% 34%;
+    --teal-foreground: 0 0% 100%;
+
+    --success: 158 64% 36%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 32 90% 44%;
+    --warning-foreground: 0 0% 100%;
+
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 222 47% 8%;
+    --foreground: 210 20% 96%;
+
+    --card: 222 40% 12%;
+    --card-foreground: 210 20% 96%;
+
+    --popover: 222 44% 10%;
+    --popover-foreground: 210 20% 96%;
+
+    --primary: 158 64% 46%;
+    --primary-foreground: 222 47% 8%;
+
+    --secondary: 222 28% 18%;
+    --secondary-foreground: 210 20% 96%;
+
+    --muted: 222 28% 16%;
+    --muted-foreground: 216 18% 66%;
+
+    --accent: 222 28% 19%;
+    --accent-foreground: 210 20% 96%;
+
+    --destructive: 0 72% 52%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 222 26% 21%;
+    --input: 222 26% 24%;
+    --ring: 158 64% 46%;
+
+    --gold: 43 96% 58%;
+    --gold-foreground: 222 47% 8%;
+
+    --teal: 180 68% 52%;
+    --teal-foreground: 222 47% 8%;
+
+    --success: 158 64% 46%;
+    --success-foreground: 222 47% 8%;
+
+    --warning: 38 92% 58%;
+    --warning-foreground: 222 47% 8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    /* Slightly larger base size for a roomier, more legible dashboard. */
+    font-size: 16.5px;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1, "tnum" 1;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    /* Guard against accidental horizontal overflow on mobile. `clip` (not
+       `hidden`/`auto`) does NOT create a scroll container, so the sticky
+       header keeps working. Intentional x-scroll (bracket, tab rails) opts
+       in locally with its own overflow-x-auto. */
+    overflow-x: clip;
+  }
+  /* Soft elevation for cards in light mode; flatter in dark. */
+  .card-elevate {
+    box-shadow: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.06);
+  }
+  .dark .card-elevate {
+    box-shadow: none;
+  }
+  /* Tabular numerals for scores, points, and tables. */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  /* Thin grid line used by Swiss-style tables/cards. */
+  .hairline {
+    @apply border border-border;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
