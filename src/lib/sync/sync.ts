@@ -21,11 +21,17 @@ const ALIASES: Record<string, string> = {
   unitedstates: "USA", usa: "USA", korearepublic: "KOR", southkorea: "KOR",
   turkiye: "TUR", turkey: "TUR", ivorycoast: "CIV", cotedivoire: "CIV",
   drcongo: "COD", congodr: "COD", democraticrepublicofthecongo: "COD",
-  capeverde: "CPV", caboverde: "CPV", czechia: "CZE", czechrepublic: "CZE",
+  capeverde: "CPV", caboverde: "CPV", capeverdeislands: "CPV", czechia: "CZE", czechrepublic: "CZE",
   bosniaherzegovina: "BIH", bosniaandherzegovina: "BIH", curacao: "CUW",
 };
 
 const SYNC_THROTTLE_MS = 60_000;
+// Cap how many /fixtures/events calls we make per run — keeps a 1-2 min cron
+// well within a 7,500/day quota even if several matches are live at once.
+const MAX_EVENT_FIXTURES_PER_RUN = 6;
+// How far apart (in ms) a knockout fixture's kickoff may be from our scheduled
+// placeholder match's kickoff and still be considered the same fixture.
+const KNOCKOUT_MATCH_WINDOW_MS = 4 * 24 * 60 * 60 * 1000;
 
 export interface SyncOutcome {
   status: string;
@@ -64,63 +70,169 @@ export async function runSync({ force = false }: { force?: boolean } = {}): Prom
   try {
     const { fixtures, quota } = await provider.fetchFixtures();
 
-    // Resolve provider team names → our team ids.
-    const teams = await prisma.team.findMany({ select: { id: true, name: true, shortName: true } });
+    // ---- Resolve provider team ids/names → our team ids ---------------------
+    const teams = await prisma.team.findMany({ select: { id: true, name: true, shortName: true, apiTeamId: true } });
     const byNorm = new Map<string, string>();
     for (const t of teams) {
       byNorm.set(normalize(t.name), t.id);
       byNorm.set(normalize(t.shortName), t.id);
     }
     const byShort = new Map(teams.map((t) => [t.shortName, t.id]));
-    const resolve = (name: string): string | null => {
+    const byApiTeamId = new Map<number, string>();
+    for (const t of teams) if (t.apiTeamId != null) byApiTeamId.set(t.apiTeamId, t.id);
+    const teamApiBackfill: { id: string; apiTeamId: number }[] = [];
+
+    const resolveTeam = (apiId: number | null, name: string): string | null => {
+      if (apiId != null && byApiTeamId.has(apiId)) return byApiTeamId.get(apiId)!;
       const n = normalize(name);
-      if (byNorm.has(n)) return byNorm.get(n)!;
-      const alias = ALIASES[n];
-      return alias ? byShort.get(alias) ?? null : null;
+      let teamId = byNorm.get(n) ?? null;
+      if (!teamId) {
+        const alias = ALIASES[n];
+        if (alias) teamId = byShort.get(alias) ?? null;
+      }
+      if (teamId && apiId != null && !byApiTeamId.has(apiId)) {
+        teamApiBackfill.push({ id: teamId, apiTeamId: apiId });
+        byApiTeamId.set(apiId, teamId);
+      }
+      return teamId;
     };
 
-    // Index our matches that have both teams, by unordered team-pair.
+    // ---- Index our matches -----------------------------------------------
     const matches = await prisma.match.findMany({
-      where: { homeTeamId: { not: null }, awayTeamId: { not: null } },
       include: { result: { select: { source: true } } },
     });
     const pairKey = (a: string, b: string) => [a, b].sort().join("|");
+    const byApiFixtureId = new Map<number, (typeof matches)[number]>();
     const byPair = new Map<string, (typeof matches)[number]>();
-    for (const m of matches) byPair.set(pairKey(m.homeTeamId!, m.awayTeamId!), m);
+    for (const m of matches) {
+      if (m.apiFixtureId != null) byApiFixtureId.set(m.apiFixtureId, m);
+      if (m.homeTeamId && m.awayTeamId) byPair.set(pairKey(m.homeTeamId, m.awayTeamId), m);
+    }
+    const assignedKO = new Set<string>();
 
-    let updated = 0, matched = 0, unmatched = 0, skippedManual = 0;
+    let updated = 0, matched = 0, unmatched = 0, skippedManual = 0, koFilled = 0;
+    const matchUpdates: { id: string; data: Record<string, unknown> }[] = [];
+    const eventCandidates: { apiFixtureId: number; matchId: string }[] = [];
+
     for (const fx of fixtures) {
-      if (!fx.finished || fx.homeGoals == null || fx.awayGoals == null) continue;
-      const home = resolve(fx.homeName);
-      const away = resolve(fx.awayName);
-      if (!home || !away) { unmatched++; continue; }
-      const m = byPair.get(pairKey(home, away));
+      if (!fx.apiFixtureId) continue;
+      const homeId = resolveTeam(fx.homeApiTeamId, fx.homeName);
+      const awayId = resolveTeam(fx.awayApiTeamId, fx.awayName);
+
+      let m = byApiFixtureId.get(fx.apiFixtureId);
+      if (!m && homeId && awayId) m = byPair.get(pairKey(homeId, awayId));
+      if (!m && homeId && awayId && fx.stage && fx.stage !== "GROUP" && fx.kickoff) {
+        m = matches.find(
+          (x) =>
+            !assignedKO.has(x.id) &&
+            x.stage === fx.stage &&
+            (!x.homeTeamId || !x.awayTeamId) &&
+            Math.abs(+x.kickoff - +fx.kickoff!) < KNOCKOUT_MATCH_WINDOW_MS,
+        );
+        if (m) assignedKO.add(m.id);
+      }
       if (!m) { unmatched++; continue; }
       matched++;
-      if (m.result?.source === "ADMIN") { skippedManual++; continue; }
 
-      // Orient goals to our home/away.
-      const homeIsOurHome = home === m.homeTeamId;
-      const ourHomeGoals = homeIsOurHome ? fx.homeGoals : fx.awayGoals;
-      const ourAwayGoals = homeIsOurHome ? fx.awayGoals : fx.homeGoals;
-      const decisive = fx.state === "PENS" ? "PENS" : fx.state === "AET" ? "AET" : "FT";
-      const advancing =
-        m.stage !== "GROUP" && ourHomeGoals !== ourAwayGoals
-          ? ourHomeGoals > ourAwayGoals ? m.homeTeamId : m.awayTeamId
-          : null;
+      const data: Record<string, unknown> = {};
+      if (m.apiFixtureId == null) data.apiFixtureId = fx.apiFixtureId;
+      if (fx.kickoff && Math.abs(+m.kickoff - +fx.kickoff) > 60_000) data.kickoff = fx.kickoff;
 
-      await prisma.matchResult.upsert({
-        where: { matchId: m.id },
-        create: { matchId: m.id, ftHome: ourHomeGoals, ftAway: ourAwayGoals, decisiveScore: decisive, source: "API", wentToExtraTime: decisive !== "FT", wentToPenalties: decisive === "PENS", advancingTeamId: advancing },
-        update: { ftHome: ourHomeGoals, ftAway: ourAwayGoals, decisiveScore: decisive, source: "API", wentToExtraTime: decisive !== "FT", wentToPenalties: decisive === "PENS", advancingTeamId: advancing },
-      });
-      await prisma.match.update({ where: { id: m.id }, data: { status: "COMPLETED" } });
-      updated++;
+      let mHomeTeamId = m.homeTeamId;
+      let mAwayTeamId = m.awayTeamId;
+      if ((!m.homeTeamId || !m.awayTeamId) && homeId && awayId) {
+        data.homeTeamId = homeId;
+        data.awayTeamId = awayId;
+        mHomeTeamId = homeId;
+        mAwayTeamId = awayId;
+        koFilled++;
+      }
+
+      const isAdminResult = m.result?.source === "ADMIN";
+      if (!isAdminResult) {
+        const newStatus = fx.finished ? "COMPLETED" : fx.live ? "LIVE" : "SCHEDULED";
+        if (newStatus !== m.status) data.status = newStatus;
+      }
+      if (Object.keys(data).length) matchUpdates.push({ id: m.id, data });
+
+      // ---- Result ------------------------------------------------------
+      if (fx.finished && fx.homeGoals != null && fx.awayGoals != null && mHomeTeamId && mAwayTeamId) {
+        if (isAdminResult) {
+          skippedManual++;
+        } else {
+          const homeIsOurHome = homeId === mHomeTeamId;
+          const ourHomeGoals = homeIsOurHome ? fx.homeGoals : fx.awayGoals;
+          const ourAwayGoals = homeIsOurHome ? fx.awayGoals : fx.homeGoals;
+          const ourAetHome = homeIsOurHome ? fx.aetHome : fx.aetAway;
+          const ourAetAway = homeIsOurHome ? fx.aetAway : fx.aetHome;
+          const ourPensHome = homeIsOurHome ? fx.pensHome : fx.pensAway;
+          const ourPensAway = homeIsOurHome ? fx.pensAway : fx.pensHome;
+          const decisive = fx.state === "PENS" ? "PENS" : fx.state === "AET" ? "AET" : "FT";
+          const advancing =
+            m.stage !== "GROUP" && ourHomeGoals !== ourAwayGoals
+              ? ourHomeGoals > ourAwayGoals ? mHomeTeamId : mAwayTeamId
+              : decisive === "PENS" && ourPensHome != null && ourPensAway != null
+                ? ourPensHome > ourPensAway ? mHomeTeamId : mAwayTeamId
+                : null;
+
+          await prisma.matchResult.upsert({
+            where: { matchId: m.id },
+            create: {
+              matchId: m.id, ftHome: ourHomeGoals, ftAway: ourAwayGoals, decisiveScore: decisive, source: "API",
+              wentToExtraTime: decisive !== "FT", aetHome: ourAetHome, aetAway: ourAetAway,
+              wentToPenalties: decisive === "PENS", pensHome: ourPensHome, pensAway: ourPensAway,
+              advancingTeamId: advancing,
+            },
+            update: {
+              ftHome: ourHomeGoals, ftAway: ourAwayGoals, decisiveScore: decisive, source: "API",
+              wentToExtraTime: decisive !== "FT", aetHome: ourAetHome, aetAway: ourAetAway,
+              wentToPenalties: decisive === "PENS", pensHome: ourPensHome, pensAway: ourPensAway,
+              advancingTeamId: advancing,
+            },
+          });
+          updated++;
+        }
+      }
+
+      // ---- Events candidates (live or just-finished, non-admin) --------
+      if ((fx.live || fx.finished) && !isAdminResult) {
+        eventCandidates.push({ apiFixtureId: fx.apiFixtureId, matchId: m.id });
+      }
+    }
+
+    for (const u of matchUpdates) await prisma.match.update({ where: { id: u.id }, data: u.data });
+    for (const t of teamApiBackfill) await prisma.team.update({ where: { id: t.id }, data: { apiTeamId: t.apiTeamId } });
+
+    // ---- Events (goals/assists/cards) — quota-capped ----------------------
+    let eventsSynced = 0;
+    if (eventCandidates.length) {
+      const players = await prisma.player.findMany({ where: { apiPlayerId: { not: null } }, select: { id: true, apiPlayerId: true } });
+      const byApiPlayerId = new Map(players.map((p) => [p.apiPlayerId!, p.id]));
+
+      for (const c of eventCandidates.slice(0, MAX_EVENT_FIXTURES_PER_RUN)) {
+        const events = await provider.fetchEvents(c.apiFixtureId);
+        const rows = events.map((e) => ({
+          matchId: c.matchId,
+          type: e.type,
+          teamId: e.teamApiId != null ? byApiTeamId.get(e.teamApiId) ?? null : null,
+          playerId: e.playerApiId != null ? byApiPlayerId.get(e.playerApiId) ?? null : null,
+          minute: e.minute,
+        }));
+        await prisma.$transaction([
+          prisma.matchEvent.deleteMany({ where: { matchId: c.matchId } }),
+          ...(rows.length ? [prisma.matchEvent.createMany({ data: rows })] : []),
+        ]);
+        eventsSynced++;
+      }
     }
 
     await recomputeEverything();
 
-    const summary = `Updated ${updated} result${updated === 1 ? "" : "s"} (matched ${matched}, manual kept ${skippedManual}, unmatched ${unmatched}).`;
+    const parts = [`Updated ${updated} result${updated === 1 ? "" : "s"} (matched ${matched}, manual kept ${skippedManual}, unmatched ${unmatched}).`];
+    if (koFilled) parts.push(`Filled ${koFilled} knockout match-up${koFilled === 1 ? "" : "s"}.`);
+    if (eventsSynced) parts.push(`Synced events for ${eventsSynced} live/recent match${eventsSynced === 1 ? "" : "es"}.`);
+    const summary = parts.join(" ");
+
     await prisma.syncState.update({
       where: { id: "default" },
       data: { status: "OK", lastSuccessAt: new Date(), lastSummary: summary, lastError: null, quotaRemaining: quota.remaining, quotaLimit: quota.limit },

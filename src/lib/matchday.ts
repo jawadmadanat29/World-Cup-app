@@ -3,8 +3,8 @@
 // with Intl in TOURNAMENT_TZ so SSR and client agree regardless of the runtime
 // locale. No date-fns-tz needed.
 
-export const TOURNAMENT_TZ = "America/New_York";
-export const TOURNAMENT_TZ_LABEL = "ET"; // shown next to kickoff times
+export const TOURNAMENT_TZ = "Asia/Amman";
+export const TOURNAMENT_TZ_LABEL = "JO"; // shown next to kickoff times (Jordan local time)
 
 const KEY_FMT = new Intl.DateTimeFormat("en-CA", {
   timeZone: TOURNAMENT_TZ,

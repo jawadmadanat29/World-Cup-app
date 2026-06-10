@@ -103,6 +103,7 @@ model Team {
   isoCode       String // ISO 3166-1 alpha-2 for flag rendering, e.g. br
   confederation String? // UEFA | CONMEBOL | CONCACAF | CAF | AFC | OFC
   isSample      Boolean  @default(true)
+  apiTeamId     Int?     @unique // API-Football team id (resolved on first sync match)
   createdAt     DateTime @default(now())
 
   groupMembers GroupMember[]
@@ -154,6 +155,7 @@ model Player {
   shirtNumber Int?
   isYoung     Boolean @default(false) // eligible for Best Young Player
   isSample    Boolean @default(true)
+  apiPlayerId Int?    @unique // API-Football player id (squad import / event matching)
 
   events MatchEvent[]
 
@@ -174,6 +176,8 @@ model Match {
   homeTeam   Team?   @relation("HomeTeam", fields: [homeTeamId], references: [id])
   awayTeamId String?
   awayTeam   Team?   @relation("AwayTeam", fields: [awayTeamId], references: [id])
+
+  apiFixtureId Int? @unique // API-Football fixture id (stable cross-sync match)
 
   // Knockout placeholders & bracket wiring (used until real teams are known).
   homePlaceholder    String? // e.g. "Winner Group A", "Runner-up B", "Best 3rd (A/B/C)"
