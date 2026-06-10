@@ -4,12 +4,14 @@ import { redirect } from "next/navigation";
 import { LogIn } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { LoginForm } from "./login-form";
-import { getCurrentParticipantId } from "@/lib/auth";
+import { getCurrentParticipant } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Sign in" };
 
 export default async function PlayerLoginPage() {
-  if (await getCurrentParticipantId()) redirect("/predictions");
+  // Check the account still EXISTS (not just that the token is valid) — a stale
+  // cookie for a deleted account would otherwise ping-pong /login ↔ /predictions.
+  if (await getCurrentParticipant()) redirect("/predictions");
   return (
     <div className="mx-auto flex min-h-[60vh] max-w-md items-center">
       <Card className="w-full">

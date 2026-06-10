@@ -4,13 +4,15 @@ import { redirect } from "next/navigation";
 import { UserPlus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { SignupForm } from "./signup-form";
-import { getCurrentParticipantId } from "@/lib/auth";
+import { getCurrentParticipant } from "@/lib/auth";
 import { getTeamMap } from "@/lib/queries";
 
 export const metadata: Metadata = { title: "Create account" };
 
 export default async function SignupPage() {
-  if (await getCurrentParticipantId()) redirect("/predictions");
+  // Existence check (not just a valid token) so a stale cookie for a deleted
+  // account doesn't loop /signup ↔ /predictions.
+  if (await getCurrentParticipant()) redirect("/predictions");
   const teamMap = await getTeamMap();
   const teams = [...teamMap.values()]
     .map((t) => ({ id: t.id, name: t.name }))
