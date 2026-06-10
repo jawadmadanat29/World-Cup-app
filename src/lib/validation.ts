@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   OUTCOMES,
   FIRST_TO_SCORE,
+  CONFIDENCE_LEVELS,
   EVENT_TYPES,
   AWARD_TYPES,
   DECISIVE_SCORE,
@@ -62,6 +63,7 @@ export const matchPredictionSchema = z.object({
   assistPlayerIds: z.array(z.string()).max(2, "Max 2 assist providers").default([]),
   multiScorerPlayerIds: z.array(z.string()).max(1, "Pick one multi-goal scorer").default([]),
   wildcardPick: optStr,
+  confidence: z.enum(tuple(CONFIDENCE_LEVELS)).optional().or(z.literal("")),
   applyWildcard: z.boolean().default(false),
 });
 export type MatchPredictionInputForm = z.infer<typeof matchPredictionSchema>;

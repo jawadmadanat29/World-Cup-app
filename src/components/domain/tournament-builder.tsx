@@ -2,7 +2,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Check, ChevronLeft, ChevronRight, AlertTriangle, Trophy } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, AlertTriangle, Trophy, Shuffle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -29,6 +29,16 @@ type Existing = {
 
 const STEPS = ["Group finishes", "Best thirds", "Round of 32", "Round of 16", "Quarter-finals", "Semi-finals", "Final", "Top players", "Review"] as const;
 const STEP_STAGE: Record<number, string> = { 2: "R32", 3: "R16", 4: "QF", 5: "SF", 6: "FINAL" };
+
+/** In-place Fisher–Yates shuffle on a copy. */
+function shuffled<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
 // ---- pure bracket resolution -------------------------------------------------
 interface Ctx {
@@ -265,8 +275,17 @@ function GroupsStep({ groups, orders, setOrders, teamMap }: {
   const POS = ["1st", "2nd", "3rd", "4th"];
   const setSlot = (gid: string, i: number, teamId: string) =>
     setOrders((o) => ({ ...o, [gid]: (o[gid] ?? []).map((x, idx) => (idx === i ? teamId : x)) }));
+  const randomizeAll = () =>
+    setOrders(Object.fromEntries(groups.map((g) => [g.id, shuffled(g.teams.map((t) => t.id))])));
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground">Rank all four teams in every group, or shuffle to start fast and tweak.</p>
+        <Button variant="outline" size="sm" onClick={randomizeAll} className="shrink-0">
+          <Shuffle className="h-4 w-4" /> Randomize picks
+        </Button>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {groups.map((g) => {
         const order = orders[g.id] ?? [];
         const dup = new Set(order).size !== order.length;
@@ -290,6 +309,7 @@ function GroupsStep({ groups, orders, setOrders, teamMap }: {
           </Card>
         );
       })}
+      </div>
     </div>
   );
 }

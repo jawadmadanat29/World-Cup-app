@@ -16,6 +16,7 @@ import { StatusBadge } from "@/components/domain/status-badge";
 import { Flag } from "@/components/domain/flag";
 import { cn } from "@/lib/utils";
 import type { LockState } from "@/lib/enums";
+import { CONFIDENCE_LEVELS, CONFIDENCE_LABELS } from "@/lib/enums";
 
 type Team = { id: string; name: string; isoCode: string; shortName: string } | null;
 type Player = { id: string; name: string; position: string };
@@ -38,7 +39,7 @@ export function MatchPredictionForm({
     homeGoals: number | null; awayGoals: number | null; advanceTeamId: string | null;
     predictExtraTime: boolean | null; predictPenalties: boolean | null; penaltyHome: number | null; penaltyAway: number | null;
     firstTeamToScore: string | null; bttsPrediction: boolean | null; cleanSheetPrediction: boolean | null;
-    wildcardPick: string | null;
+    wildcardPick: string | null; confidence: string | null;
     anytimeScorerPlayerIds: string[]; assistPlayerIds: string[]; multiScorerPlayerIds: string[];
   } | null;
   wildcardApplied: boolean;
@@ -60,6 +61,7 @@ export function MatchPredictionForm({
   const [assists, setAssists] = React.useState<string[]>([e?.assistPlayerIds[0] ?? NONE, e?.assistPlayerIds[1] ?? NONE]);
   const [multi, setMulti] = React.useState(e?.multiScorerPlayerIds[0] ?? NONE);
   const [boldCall, setBoldCall] = React.useState(e?.wildcardPick ?? "");
+  const [confidence, setConfidence] = React.useState(e?.confidence ?? NONE);
   const [useWildcard, setUseWildcard] = React.useState(wildcardApplied);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
 
@@ -118,6 +120,7 @@ export function MatchPredictionForm({
         assistPlayerIds: assists.filter((x) => x !== NONE),
         multiScorerPlayerIds: multi === NONE ? [] : [multi],
         wildcardPick: boldCall || undefined,
+        confidence: confidence === NONE ? "" : (confidence as (typeof CONFIDENCE_LEVELS)[number]),
         applyWildcard: useWildcard,
       });
       if (res.ok) { toast.success(complete ? res.message : "Saved — some bonus picks are still missing."); router.refresh(); }
@@ -222,6 +225,21 @@ export function MatchPredictionForm({
             <Label>Multi-goal scorer (player to score 2+)</Label>
             <PlayerSelect value={multi} onChange={setMulti} />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Confidence — non-scoring, for fun/stats only. */}
+      <Card>
+        <CardHeader><CardTitle className="text-base">How confident are you? <span className="text-xs font-normal text-muted-foreground">· just for fun, doesn’t score</span></CardTitle></CardHeader>
+        <CardContent>
+          <Select value={confidence} onValueChange={setConfidence} disabled={readOnly}>
+            <SelectTrigger className="h-9"><SelectValue placeholder="—" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NONE}>—</SelectItem>
+              {CONFIDENCE_LEVELS.map((c) => <SelectItem key={c} value={c}>{CONFIDENCE_LABELS[c]}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <p className="mt-1.5 text-xs text-muted-foreground">We’ll surface your confidence calls in your stats later.</p>
         </CardContent>
       </Card>
 

@@ -39,14 +39,14 @@ export async function writeMatchPrediction(input: MatchPredInput, actor: string)
       advanceTeamId: d.advanceTeamId ?? null, predictExtraTime: d.predictExtraTime ?? null, predictPenalties: d.predictPenalties ?? null,
       penaltyHome: d.penaltyHome ?? null, penaltyAway: d.penaltyAway ?? null,
       firstTeamToScore: d.firstTeamToScore || null, bttsPrediction: d.bttsPrediction ?? null, cleanSheetPrediction: d.cleanSheetPrediction ?? null,
-      totalGoalsRange: null, totalCardsRange: null, wildcardPick: d.wildcardPick ?? null,
+      totalGoalsRange: null, totalCardsRange: null, wildcardPick: d.wildcardPick ?? null, confidence: d.confidence || null,
     },
     update: {
       homeGoals: d.homeGoals ?? null, awayGoals: d.awayGoals ?? null, predictedOutcome: outcome,
       advanceTeamId: d.advanceTeamId ?? null, predictExtraTime: d.predictExtraTime ?? null, predictPenalties: d.predictPenalties ?? null,
       penaltyHome: d.penaltyHome ?? null, penaltyAway: d.penaltyAway ?? null,
       firstTeamToScore: d.firstTeamToScore || null, bttsPrediction: d.bttsPrediction ?? null, cleanSheetPrediction: d.cleanSheetPrediction ?? null,
-      totalGoalsRange: null, totalCardsRange: null, wildcardPick: d.wildcardPick ?? null,
+      totalGoalsRange: null, totalCardsRange: null, wildcardPick: d.wildcardPick ?? null, confidence: d.confidence || null,
       updatedAt: new Date(),
     },
   });

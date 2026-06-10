@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRight, CalendarDays, Trophy, BarChart3, Activity, ListChecks, ChevronRight, Goal, Users } from "lucide-react";
-import { getHomeData } from "@/lib/queries";
+import { getHomeData, getPredictionHub } from "@/lib/queries";
 import { getCurrentParticipantId } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,10 +16,19 @@ import { timeLabel, TOURNAMENT_TZ_LABEL } from "@/lib/matchday";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [d, participantId] = await Promise.all([getHomeData(), getCurrentParticipantId()]);
+  const participantId = await getCurrentParticipantId();
   const loggedIn = !!participantId;
+  const [d, hub] = await Promise.all([getHomeData(), loggedIn ? getPredictionHub(participantId) : Promise.resolve(null)]);
   const startHref = loggedIn ? "/predictions" : "/signup";
   const { progress: pg, teamMap } = d;
+
+  // Logged-in personal progress (Phase 1.2).
+  const groupsDone = hub ? hub.groups.filter((g) => g.ranked).length : 0;
+  const hubDenom = hub ? hub.matchTotals.total + 12 + 1 : 0;
+  const hubNumer = hub ? hub.matchTotals.complete + groupsDone + (hub.tournamentDone ? 1 : 0) : 0;
+  const hubPct = hubDenom ? Math.round((hubNumer / hubDenom) * 100) : 0;
+  const continueHref = hub && !hub.tournamentDone ? "/predictions?mode=tournament" : "/predictions";
+  const wildcardsLeft = hub ? hub.wildcardsMax - hub.wildcardsUsed : 0;
   const favIso = (favoriteTeamId: string | null) => (favoriteTeamId ? teamMap.get(favoriteTeamId)?.isoCode ?? null : null);
   const tournamentStarted = d.stats.completedMatches > 0;
   const tProgress = d.stats.totalMatches ? Math.round((d.stats.completedMatches / d.stats.totalMatches) * 100) : 0;
@@ -44,6 +53,30 @@ export default async function HomePage() {
           <Button asChild variant="outline"><Link href="/leaderboard">View Leaderboard</Link></Button>
         </div>
       </section>
+
+      {/* Logged-in personal progress (Phase 1.2) */}
+      {hub && (
+        <Card className="border-primary/30">
+          <CardHeader className="flex-row items-center justify-between space-y-0">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <ListChecks className="h-4 w-4" /> Your predictions, {hub.participant.name.split(" ")[0]}
+            </CardTitle>
+            <span className="text-sm font-medium tabular-nums text-muted-foreground">{hubPct}% complete</span>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Progress value={hubPct} indicatorClassName={hubPct >= 100 ? "bg-primary" : "bg-gold"} />
+            <div className="flex flex-wrap gap-2 text-xs">
+              <Badge variant={hub.tournamentDone ? "default" : "muted"}>{hub.tournamentDone ? "Tournament set ✓" : "Tournament not set"}</Badge>
+              <Badge variant="secondary">Group rankings {groupsDone}/12</Badge>
+              <Badge variant="secondary">{hub.matchTotals.complete}/{hub.matchTotals.total} matches predicted</Badge>
+              <Badge variant="secondary">Wildcards {wildcardsLeft} left</Badge>
+            </div>
+            <Button asChild className="w-full sm:w-auto">
+              <Link href={continueHref}>Continue Predictions <ArrowUpRight className="h-4 w-4" /></Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Minimal upcoming-matches ribbon */}
       {d.ribbon.length > 0 && (

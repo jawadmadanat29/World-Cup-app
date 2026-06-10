@@ -52,6 +52,17 @@ export type ScorerPickType = (typeof SCORER_PICK_TYPES)[number];
 
 export const FIRST_TO_SCORE = ["HOME", "AWAY", "NONE"] as const;
 
+// Per-match confidence (non-scoring — captured for fun/stats only, surfaced in Phase 2).
+export const CONFIDENCE_LEVELS = ["GUESSING", "UNSURE", "CONFIDENT", "VERY_CONFIDENT"] as const;
+export type ConfidenceLevel = (typeof CONFIDENCE_LEVELS)[number];
+
+export const CONFIDENCE_LABELS: Record<ConfidenceLevel, string> = {
+  GUESSING: "Just guessing",
+  UNSURE: "Not sure",
+  CONFIDENT: "Confident",
+  VERY_CONFIDENT: "Very confident",
+};
+
 export const EVENT_TYPES = [
   "GOAL",
   "ASSIST",

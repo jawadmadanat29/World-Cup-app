@@ -21,7 +21,16 @@ function Cell({ value, label }: { value: number; label: string }) {
   );
 }
 
-export function Countdown({ target }: { target: string }) {
+/** Short "2d 4h", "4h 12m" or "12m 30s" label — the largest two non-zero units. */
+function compactLabel(ms: number): string {
+  const { d, h, m, s } = parts(ms);
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
+export function Countdown({ target, compact = false }: { target: string; compact?: boolean }) {
   const targetMs = React.useMemo(() => new Date(target).getTime(), [target]);
   const [now, setNow] = React.useState<number | null>(null);
 
@@ -30,6 +39,14 @@ export function Countdown({ target }: { target: string }) {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
+
+  if (compact) {
+    return (
+      <span className="font-mono tabular-nums" role="timer" aria-live="off">
+        {now === null ? "—" : compactLabel(targetMs - now)}
+      </span>
+    );
+  }
 
   if (now === null) {
     return <div className="h-[68px]" aria-hidden />;

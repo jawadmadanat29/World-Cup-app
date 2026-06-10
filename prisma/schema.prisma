@@ -301,6 +301,7 @@ model ParticipantMatchPrediction {
   totalGoalsRange  String? // range label, e.g. "2-3"
   totalCardsRange  String? // range label
   wildcardPick     String? // free-text bold "wildcard" note
+  confidence       String? // GUESSING | UNSURE | CONFIDENT | VERY_CONFIDENT — non-scoring, for fun/stats
 
   submittedAt DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

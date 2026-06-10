@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Check, ChevronRight, Trophy, CalendarDays, Lock } from "lucide-react";
+import { Trophy, CalendarDays, Lock } from "lucide-react";
 import { getCurrentParticipantId } from "@/lib/auth";
 import { getPredictionHub, getTournamentBuilderData } from "@/lib/queries";
 import { PageHeader } from "@/components/domain/page-header";
@@ -9,13 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ParticipantAvatar } from "@/components/domain/participant-avatar";
 import { GettingStarted } from "@/components/domain/getting-started";
-import { TeamLabel } from "@/components/domain/team-label";
-import { StatusBadge } from "@/components/domain/status-badge";
+import { MatchPredictions } from "@/components/domain/match-predictions";
+import { Countdown } from "@/components/domain/countdown";
 import { TournamentBuilder } from "@/components/domain/tournament-builder";
 import { saveMyTournamentBuilder } from "@/actions/my-predictions";
-import { STAGE_SHORT } from "@/lib/enums";
-import { timeLabel, TOURNAMENT_TZ_LABEL } from "@/lib/matchday";
-import type { HubMatch } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -90,66 +87,13 @@ function MatchMode({ hub }: { hub: NonNullable<Awaited<ReturnType<typeof getPred
   if (hub.matchdays.length === 0) {
     return <Card className="p-8 text-center text-sm text-muted-foreground">Fixtures will appear here once the schedule is loaded.</Card>;
   }
-  return (
-    <div className="space-y-4">
-      {hub.currentMatchday && (
-        <Card className="border-primary/30 bg-primary/5 p-4">
-          <p className="text-sm font-medium">Today’s slate · {hub.currentMatchday.label}</p>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            <b className="tabular-nums text-foreground">{hub.currentMatchday.complete}</b> of {hub.currentMatchday.total} predictions complete — don’t leave points on the table before kickoff.
-          </p>
-        </Card>
-      )}
-      {hub.matchdays.map((d) => (
-        <Card key={d.key} className="overflow-hidden">
-          <div className="flex items-center justify-between border-b bg-secondary/30 px-4 py-2.5">
-            <span className="text-sm font-semibold">{d.label}</span>
-            {d.status === "current" && <Badge variant="default">Open now</Badge>}
-            {d.status === "upcoming" && <Badge variant="secondary">Upcoming</Badge>}
-            {d.status === "done" && <Badge variant="muted">Done</Badge>}
-          </div>
-          <div className="divide-y">
-            {d.matches.map((m) => <MatchRow key={m.id} m={m} />)}
-          </div>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
-function MatchRow({ m }: { m: HubMatch }) {
-  const inner = (
-    <div className={cn("flex items-center gap-3 px-4 py-2.5", m.editable || m.predicted ? "transition-colors hover:bg-muted/40" : "opacity-70")}>
-      <Badge variant="secondary" className="hidden shrink-0 sm:inline-flex">
-        {m.stage === "GROUP" && m.groupCode ? m.groupCode : STAGE_SHORT[m.stage as keyof typeof STAGE_SHORT]}
-      </Badge>
-      <span className="w-16 shrink-0 text-xs tabular-nums text-muted-foreground">{timeLabel(m.kickoff)} {TOURNAMENT_TZ_LABEL}</span>
-      <div className="grid min-w-0 flex-1 grid-cols-[1fr_auto_1fr] items-center gap-2">
-        <TeamLabel name={m.home.name} iso={m.home.isoCode} showShort flagSize="sm" className="justify-start" />
-        <span className="text-xs text-muted-foreground">v</span>
-        <TeamLabel name={m.away.name} iso={m.away.isoCode} showShort flagSize="sm" reverse className="justify-end" />
-      </div>
-      {m.lockState === "UPCOMING" ? (
-        <Badge variant="secondary" className="gap-1"><Lock className="h-3 w-3" /> Upcoming</Badge>
-      ) : m.predicted ? (
-        <Badge variant={m.complete ? "default" : "warning"} className="gap-1">
-          <Check className="h-3 w-3" /> {m.score}{!m.complete && " · partial"}
-        </Badge>
-      ) : (
-        <StatusBadge state={m.lockState} />
-      )}
-      {m.lockState !== "UPCOMING" && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-    </div>
-  );
-  if (m.lockState === "UPCOMING") {
-    return <div title="Opens when the previous matchday ends">{inner}</div>;
-  }
-  return <Link href={`/predictions/match/${m.id}`}>{inner}</Link>;
+  return <MatchPredictions matchdays={hub.matchdays} totals={hub.matchTotals} />;
 }
 
 async function TournamentMode({ pid }: { pid: string }) {
   const data = await getTournamentBuilderData(pid);
   if (!data) redirect("/login");
+  const opensInFuture = data.firstKickoff && +data.firstKickoff > Date.now();
   return (
     <div className="space-y-4">
       <Card className="border-gold/30 bg-gold/5 p-3 text-xs text-muted-foreground">
@@ -157,6 +101,17 @@ async function TournamentMode({ pid }: { pid: string }) {
           <Lock className="h-3.5 w-3.5 text-gold" /> One forecast for the whole tournament — it locks permanently at the first kickoff.
         </span>
       </Card>
+      {data.firstKickoff && (
+        <Card className="flex flex-col items-center gap-2 p-4 text-center sm:flex-row sm:justify-between sm:text-left">
+          <p className="text-sm">
+            <span className="font-medium">Tournament picks lock when the opening match starts.</span>
+            <span className="block text-xs text-muted-foreground sm:mt-0.5">
+              {opensInFuture ? "Lock in your bracket before kickoff." : "Predictions are now closed."}
+            </span>
+          </p>
+          {opensInFuture && <Countdown target={data.firstKickoff.toISOString()} />}
+        </Card>
+      )}
       <TournamentBuilder
         groups={data.groups}
         teams={data.teams}

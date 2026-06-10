@@ -1,5 +1,5 @@
 import "server-only";
-import { subDays } from "date-fns";
+import { subDays, subMinutes } from "date-fns";
 import { prisma } from "@/lib/db";
 import { getConfig } from "@/lib/settings";
 import { matchLockState, sectionLockState, isLocked } from "@/lib/locking";
@@ -434,6 +434,7 @@ export type PlayerLite = { id: string; name: string; position: string };
 
 export interface HubMatch {
   id: string; matchNumber: number; stage: string; groupCode: string | null; kickoff: Date;
+  lockAt: string; // ISO time this match locks (kickoff minus buffer) — for countdowns
   home: TeamLite; away: TeamLite;
   lockState: LockState; // DISPLAY state (UPCOMING for future matchdays)
   realLockState: LockState; // time-based per-match state
@@ -467,8 +468,9 @@ export async function getPredictionHub(participantId: string) {
         { kickoff: m.kickoff, manualLock: m.manualLock, hasResult: !!m.result, status: m.status, lockBufferMinutes: m.lockBufferMinutes },
         config.matchLockBufferMinutes, config.closingSoonMinutes, now,
       );
+      const lockAt = subMinutes(m.kickoff, m.lockBufferMinutes ?? config.matchLockBufferMinutes).toISOString();
       return {
-        id: m.id, matchNumber: m.matchNumber, stage: m.stage, groupCode: m.group?.code ?? null, kickoff: m.kickoff,
+        id: m.id, matchNumber: m.matchNumber, stage: m.stage, groupCode: m.group?.code ?? null, kickoff: m.kickoff, lockAt,
         home: teamMap.get(m.homeTeamId!)!, away: teamMap.get(m.awayTeamId!)!,
         realLockState,
         predicted: isMatchPredictionStarted(pred),
@@ -559,7 +561,7 @@ export async function getMatchPrediction(participantId: string, matchId: string)
           predictExtraTime: existing.predictExtraTime, predictPenalties: existing.predictPenalties,
           penaltyHome: existing.penaltyHome, penaltyAway: existing.penaltyAway,
           firstTeamToScore: existing.firstTeamToScore, bttsPrediction: existing.bttsPrediction, cleanSheetPrediction: existing.cleanSheetPrediction,
-          wildcardPick: existing.wildcardPick,
+          wildcardPick: existing.wildcardPick, confidence: existing.confidence,
           anytimeScorerPlayerIds: existing.scorerPicks.filter((s) => s.pickType === "ANYTIME").map((s) => s.playerId),
           assistPlayerIds: existing.scorerPicks.filter((s) => s.pickType === "ASSIST").map((s) => s.playerId),
           multiScorerPlayerIds: existing.scorerPicks.filter((s) => s.pickType === "MULTI").map((s) => s.playerId),
@@ -660,7 +662,7 @@ function parseKnockout(
 }
 
 export async function getTournamentBuilderData(participantId: string) {
-  const [teamMap, participant, groupsRaw, groupPreds, tour, awardPreds, config, deadline] = await Promise.all([
+  const [teamMap, participant, groupsRaw, groupPreds, tour, awardPreds, config, deadline, opener] = await Promise.all([
     getTeamMap(),
     prisma.participant.findUnique({ where: { id: participantId } }),
     prisma.group.findMany({ orderBy: { orderIndex: "asc" }, include: { members: true } }),
@@ -669,6 +671,7 @@ export async function getTournamentBuilderData(participantId: string) {
     prisma.participantAwardPrediction.findMany({ where: { participantId } }),
     getConfig(),
     prisma.predictionDeadline.findUnique({ where: { scope: "TOURNAMENT" } }),
+    prisma.match.findFirst({ where: { homeTeamId: { not: null }, awayTeamId: { not: null } }, orderBy: { kickoff: "asc" }, select: { kickoff: true } }),
   ]);
   if (!participant) return null;
   const locked = sectionLockState({ deadline: deadline?.deadline ?? null, manualLocked: deadline?.manualLocked ?? false }, config.closingSoonMinutes) === "LOCKED";
@@ -701,6 +704,7 @@ export async function getTournamentBuilderData(participantId: string) {
   return {
     participant,
     locked,
+    firstKickoff: opener?.kickoff ?? null,
     teams: [...teamMap.values()],
     groups,
     knockout,
