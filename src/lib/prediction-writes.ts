@@ -103,12 +103,12 @@ export async function writeTournamentPrediction(input: TournamentPredInput, acto
       participantId: d.participantId,
       championTeamId: clean(d.championTeamId), runnerUpTeamId: clean(d.runnerUpTeamId), thirdTeamId: clean(d.thirdTeamId), fourthTeamId: clean(d.fourthTeamId),
       surpriseTeamId: clean(d.surpriseTeamId), disappointingTeamId: clean(d.disappointingTeamId), highestScoringTeamId: clean(d.highestScoringTeamId), bestDefensiveTeamId: clean(d.bestDefensiveTeamId),
-      totalGoalsRange: clean(d.totalGoalsRange), finalPenaltyShootout: d.finalPenaltyShootout ?? null, redCardRange: clean(d.redCardRange), hatTrickRange: clean(d.hatTrickRange),
+      finalPenaltyShootout: d.finalPenaltyShootout ?? null,
     },
     update: {
       championTeamId: clean(d.championTeamId), runnerUpTeamId: clean(d.runnerUpTeamId), thirdTeamId: clean(d.thirdTeamId), fourthTeamId: clean(d.fourthTeamId),
       surpriseTeamId: clean(d.surpriseTeamId), disappointingTeamId: clean(d.disappointingTeamId), highestScoringTeamId: clean(d.highestScoringTeamId), bestDefensiveTeamId: clean(d.bestDefensiveTeamId),
-      totalGoalsRange: clean(d.totalGoalsRange), finalPenaltyShootout: d.finalPenaltyShootout ?? null, redCardRange: clean(d.redCardRange), hatTrickRange: clean(d.hatTrickRange),
+      finalPenaltyShootout: d.finalPenaltyShootout ?? null,
     },
   });
 

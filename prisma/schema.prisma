@@ -372,10 +372,7 @@ model ParticipantTournamentPrediction {
   highestScoringTeamId String?
   bestDefensiveTeamId  String?
 
-  totalGoalsRange     String?
   finalPenaltyShootout Boolean?
-  redCardRange        String?
-  hatTrickRange       String?
 
   submittedAt DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

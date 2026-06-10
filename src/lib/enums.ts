@@ -124,18 +124,6 @@ export type TournamentTeamCategory = (typeof TOURNAMENT_TEAM_CATEGORIES)[number]
 export const KNOCKOUT_PRED_MODES = ["PRE_TOURNAMENT", "STAGE_BY_STAGE"] as const;
 export type KnockoutPredMode = (typeof KNOCKOUT_PRED_MODES)[number];
 
-// Range option labels (kept as labels so they survive a Postgres/SQLite swap).
-export const TOTAL_GOALS_RANGES = ["0-1", "2-3", "4-5", "6+"] as const;
-export const TOTAL_CARDS_RANGES = ["0-2", "3-4", "5-6", "7+"] as const;
-export const TOURNAMENT_GOALS_RANGES = [
-  "<140",
-  "140-159",
-  "160-179",
-  "180+",
-] as const;
-export const RED_CARD_RANGES = ["0-2", "3-5", "6-9", "10+"] as const;
-export const HATTRICK_RANGES = ["0", "1-2", "3-4", "5+"] as const;
-
 export const LOCK_STATES = [
   "UPCOMING", // future matchday — not yet open for predictions (progressive unlock)
   "OPEN",

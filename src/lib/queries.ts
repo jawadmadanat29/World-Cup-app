@@ -5,6 +5,7 @@ import { getConfig } from "@/lib/settings";
 import { matchLockState, sectionLockState, isLocked } from "@/lib/locking";
 import { groupMatchdays, currentMatchdayKey } from "@/lib/matchday";
 import { isMatchPredictionStarted, isMatchPredictionComplete } from "@/lib/prediction-complete";
+import { computePlayerStats, computeAchievements, outcomeOf, type Outcome, type PredOutcome } from "@/lib/player-stats";
 import type { LockState } from "@/lib/enums";
 import { computeGroupStandings, rankBestThirds, groupQualification, type Qualification } from "@/lib/scoring/standings";
 import { rankLeaderboard, type LeaderboardStats } from "@/lib/scoring/tiebreakers";
@@ -584,34 +585,6 @@ export async function getGroupPrediction(participantId: string, groupId: string)
   return { participant, group: { id: group.id, code: group.code, name: group.name }, teams, existingOrder: existing.map((e) => e.teamId) };
 }
 
-export async function getTournamentPredictionData(participantId: string) {
-  const [teamMap, participant, existing] = await Promise.all([
-    getTeamMap(),
-    prisma.participant.findUnique({ where: { id: participantId } }),
-    prisma.participantTournamentPrediction.findUnique({ where: { participantId }, include: { teamPicks: true } }),
-  ]);
-  if (!participant) return null;
-  const teams = [...teamMap.values()].sort((a, b) => a.name.localeCompare(b.name));
-  return {
-    participant,
-    teams,
-    existing: existing
-      ? {
-          championTeamId: existing.championTeamId ?? "", runnerUpTeamId: existing.runnerUpTeamId ?? "",
-          thirdTeamId: existing.thirdTeamId ?? "", fourthTeamId: existing.fourthTeamId ?? "",
-          surpriseTeamId: existing.surpriseTeamId ?? "", disappointingTeamId: existing.disappointingTeamId ?? "",
-          highestScoringTeamId: existing.highestScoringTeamId ?? "", bestDefensiveTeamId: existing.bestDefensiveTeamId ?? "",
-          totalGoalsRange: existing.totalGoalsRange ?? "", finalPenaltyShootout: existing.finalPenaltyShootout ?? false,
-          redCardRange: existing.redCardRange ?? "", hatTrickRange: existing.hatTrickRange ?? "",
-          semifinalistTeamIds: existing.teamPicks.filter((t) => t.category === "SEMIFINALIST").map((t) => t.teamId),
-          quarterfinalistTeamIds: existing.teamPicks.filter((t) => t.category === "QUARTERFINALIST").map((t) => t.teamId),
-          roundOf16TeamIds: existing.teamPicks.filter((t) => t.category === "ROUND_OF_16").map((t) => t.teamId),
-          bestThirdTeamIds: existing.teamPicks.filter((t) => t.category === "BEST_THIRD").map((t) => t.teamId),
-        }
-      : null,
-  };
-}
-
 export async function getAwardPredictionData(participantId: string) {
   const [teamMap, participant, existing] = await Promise.all([
     getTeamMap(),
@@ -1023,13 +996,13 @@ export async function getLiveComparison() {
 //  - tournament submissions shown as "submitted" with NO selections revealed
 export interface FeedEvent {
   id: string;
-  kind: "MATCH" | "TOURNAMENT" | "WILDCARD" | "BOLD";
+  kind: "MATCH" | "TOURNAMENT" | "WILDCARD" | "BOLD" | "EXACT" | "LEAD";
   participant: ParticipantLite;
   text: string;
   at: Date;
 }
 
-export async function getLatestPredictions(limit = 15): Promise<FeedEvent[]> {
+export async function getLatestPredictions(limit = 15, leaderboard?: LeaderboardRow[]): Promise<FeedEvent[]> {
   const [config, participants, teamMap] = await Promise.all([getConfig(), getParticipants(), getTeamMap()]);
   const pmap = new Map(participants.map((p) => [p.id, p]));
   const now = new Date();
@@ -1079,6 +1052,39 @@ export async function getLatestPredictions(limit = 15): Promise<FeedEvent[]> {
   for (const t of tourPreds) {
     const part = pmap.get(t.participantId);
     if (part) events.push({ id: `t-${t.participantId}`, kind: "TOURNAMENT", participant: part, text: "submitted their tournament picks", at: t.updatedAt });
+  }
+
+  // Exact-score hits (privacy-safe: a MATCH_EXACT point only exists once the
+  // match has a result, so it's already public).
+  const exactTxns = await prisma.pointTransaction.findMany({
+    where: { source: "MATCH_EXACT" },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+    select: { id: true, participantId: true, matchId: true, createdAt: true },
+  });
+  const exactMatchIds = [...new Set(exactTxns.map((t) => t.matchId).filter((x): x is string => !!x))];
+  const exactMatches = exactMatchIds.length
+    ? await prisma.match.findMany({ where: { id: { in: exactMatchIds } }, select: { id: true, homeTeamId: true, awayTeamId: true } })
+    : [];
+  const exactMap = new Map(exactMatches.map((m) => [m.id, m]));
+  for (const t of exactTxns) {
+    const part = pmap.get(t.participantId);
+    const m = t.matchId ? exactMap.get(t.matchId) : null;
+    const home = m?.homeTeamId ? teamMap.get(m.homeTeamId) : null;
+    const away = m?.awayTeamId ? teamMap.get(m.awayTeamId) : null;
+    if (part && home && away) events.push({ id: `e-${t.id}`, kind: "EXACT", participant: part, text: `nailed the exact score in ${home.shortName} v ${away.shortName}`, at: t.createdAt });
+  }
+
+  // "Moved into 1st" — from leaderboard movement (current leader who climbed).
+  const board = leaderboard ?? (await getLeaderboard());
+  const newLeaders = board.filter((r) => r.rank === 1 && r.movement > 0);
+  if (newLeaders.length) {
+    const latest = await prisma.match.findFirst({ where: { result: { isNot: null } }, orderBy: { kickoff: "desc" }, select: { kickoff: true } });
+    const at = latest?.kickoff ?? now;
+    for (const r of newLeaders) {
+      const part = pmap.get(r.participant.id);
+      if (part) events.push({ id: `lead-${r.participant.id}`, kind: "LEAD", participant: part, text: "moved into 1st place 👑", at });
+    }
   }
 
   return events.sort((a, b) => +b.at - +a.at).slice(0, limit);
@@ -1176,6 +1182,150 @@ export async function getPublicProfile(id: string) {
     };
   }
 
-  return { participant, row, favorite, avgTotal, leaderboardSize: leaderboard.length, matchStats: { revealed: revealedMatches.length, hidden: hiddenMatches }, revealedMatches, tournament };
+  // --- player statistics + achievements (Phase 2.4 / 2.5) ---
+  // These read the player's OWN scored predictions, so there's no privacy gate:
+  // a result is public once the match has been played.
+  const [txns, tourResult, finalPlayed] = await Promise.all([
+    prisma.pointTransaction.findMany({ where: { participantId: id }, select: { matchId: true, points: true } }),
+    prisma.tournamentResult.findUnique({ where: { id: "default" }, select: { championTeamId: true } }),
+    prisma.match.findFirst({ where: { stage: "FINAL", result: { isNot: null } }, select: { id: true } }),
+  ]);
+  const kickoffByMatch = new Map(mpreds.map((p) => [p.matchId, p.match.kickoff]));
+  const predOutcomes: PredOutcome[] = mpreds.map((p) => ({
+    matchId: p.matchId,
+    kickoff: p.match.kickoff,
+    predictedOutcome: (p.predictedOutcome as Outcome | null) ?? null,
+    actualOutcome: p.match.result ? outcomeOf(p.match.result.ftHome, p.match.result.ftAway) : null,
+  }));
+  const matchPoints = txns
+    .filter((t): t is { matchId: string; points: number } => !!t.matchId && kickoffByMatch.has(t.matchId))
+    .map((t) => ({ kickoff: kickoffByMatch.get(t.matchId)!, points: t.points }));
+  const stats = computePlayerStats({
+    preds: predOutcomes,
+    matchPoints,
+    wildcardsUsed: wildcardMatchIds.size,
+    exactScores: row?.stats.exactScores ?? 0,
+  });
+  const championCorrect =
+    !!finalPlayed && !!tourResult?.championTeamId && !!tourPred?.championTeamId && tourPred.championTeamId === tourResult.championTeamId;
+  const achievements = computeAchievements({
+    preds: predOutcomes,
+    exactScores: stats.exactScores,
+    longestStreak: stats.longestStreak,
+    championCorrect,
+  });
+
+  return { participant, row, favorite, avgTotal, leaderboardSize: leaderboard.length, matchStats: { revealed: revealedMatches.length, hidden: hiddenMatches }, revealedMatches, tournament, stats, achievements };
+}
+
+// Head-to-head comparison (Phase 2.1). Privacy: the VIEWER's own picks always
+// show; the RIVAL's tournament forecast is revealed only after the first kickoff,
+// and a rival match pick only after that match locks.
+export interface CompareScalar { key: string; label: string; viewer: string | null; rival: string | null; }
+export interface CompareGroup { name: string; viewer: (string | null)[]; rival: (string | null)[] | null; }
+export interface CompareMatch {
+  id: string; stage: string; groupCode: string | null;
+  home: string | null; away: string | null;
+  viewerScore: string; rivalScore: string | null; rivalHidden: boolean; agree: boolean;
+}
+
+export async function getComparison(viewerId: string, rivalId: string) {
+  if (viewerId === rivalId) return null;
+  const [viewer, rival] = await Promise.all([
+    prisma.participant.findUnique({ where: { id: viewerId } }),
+    prisma.participant.findUnique({ where: { id: rivalId } }),
+  ]);
+  if (!viewer || !rival) return null;
+
+  const [teamMap, playerMap, config, tourDeadline, groupsRaw] = await Promise.all([
+    getTeamMap(), getPlayerMap(), getConfig(),
+    prisma.predictionDeadline.findUnique({ where: { scope: "TOURNAMENT" } }),
+    prisma.group.findMany({ orderBy: { orderIndex: "asc" } }),
+  ]);
+  const tn = (tid: string | null | undefined) => (tid ? teamMap.get(tid)?.shortName ?? null : null);
+  const pn = (pid: string | null | undefined) => (pid ? playerMap.get(pid)?.name ?? null : null);
+  const tourLocked = sectionLockState({ deadline: tourDeadline?.deadline ?? null, manualLocked: tourDeadline?.manualLocked ?? false }, config.closingSoonMinutes) === "LOCKED";
+
+  const [vTour, rTour, vAwards, rAwards, vGroups, rGroups, vMatch, rMatch] = await Promise.all([
+    prisma.participantTournamentPrediction.findUnique({ where: { participantId: viewerId } }),
+    prisma.participantTournamentPrediction.findUnique({ where: { participantId: rivalId } }),
+    prisma.participantAwardPrediction.findMany({ where: { participantId: viewerId } }),
+    prisma.participantAwardPrediction.findMany({ where: { participantId: rivalId } }),
+    prisma.participantGroupPrediction.findMany({ where: { participantId: viewerId } }),
+    prisma.participantGroupPrediction.findMany({ where: { participantId: rivalId } }),
+    prisma.participantMatchPrediction.findMany({
+      where: { participantId: viewerId, homeGoals: { not: null } },
+      include: { match: { include: { result: { select: { id: true } }, group: true } } },
+      orderBy: { match: { matchNumber: "asc" } },
+    }),
+    prisma.participantMatchPrediction.findMany({ where: { participantId: rivalId }, select: { matchId: true, homeGoals: true, awayGoals: true } }),
+  ]);
+
+  const awardOf = (rows: { awardType: string; playerId: string | null }[], type: string) => rows.find((a) => a.awardType === type)?.playerId ?? null;
+  const scalars: CompareScalar[] = [
+    { key: "champion", label: "Champion", viewer: tn(vTour?.championTeamId), rival: tourLocked ? tn(rTour?.championTeamId) : null },
+    { key: "runnerUp", label: "Runner-up", viewer: tn(vTour?.runnerUpTeamId), rival: tourLocked ? tn(rTour?.runnerUpTeamId) : null },
+    { key: "goldenBoot", label: "Golden Boot", viewer: pn(awardOf(vAwards, "GOLDEN_BOOT")), rival: tourLocked ? pn(awardOf(rAwards, "GOLDEN_BOOT")) : null },
+    { key: "topAssist", label: "Top assist", viewer: pn(awardOf(vAwards, "TOP_ASSIST")), rival: tourLocked ? pn(awardOf(rAwards, "TOP_ASSIST")) : null },
+  ];
+
+  const orderMap = (rows: { groupId: string; teamId: string; predictedPosition: number }[]) => {
+    const m = new Map<string, string[]>();
+    for (const gp of [...rows].sort((a, b) => a.predictedPosition - b.predictedPosition)) {
+      const arr = m.get(gp.groupId) ?? [];
+      arr.push(gp.teamId);
+      m.set(gp.groupId, arr);
+    }
+    return m;
+  };
+  const vOrder = orderMap(vGroups);
+  const rOrder = orderMap(rGroups);
+  const groups: CompareGroup[] = groupsRaw
+    .map((g) => ({
+      name: g.name,
+      viewer: (vOrder.get(g.id) ?? []).map((t) => tn(t)),
+      rival: tourLocked ? (rOrder.get(g.id) ?? []).map((t) => tn(t)) : null,
+    }))
+    .filter((g) => g.viewer.length === 4 || (g.rival && g.rival.length === 4));
+
+  const rByMatch = new Map(rMatch.map((p) => [p.matchId, p]));
+  const now = new Date();
+  const matches: CompareMatch[] = vMatch.map((p) => {
+    const locked = isLocked(matchLockState(
+      { kickoff: p.match.kickoff, manualLock: p.match.manualLock, hasResult: !!p.match.result, status: p.match.status, lockBufferMinutes: p.match.lockBufferMinutes },
+      config.matchLockBufferMinutes, config.closingSoonMinutes, now,
+    ));
+    const viewerScore = `${p.homeGoals}–${p.awayGoals}`;
+    const rp = rByMatch.get(p.matchId);
+    const rivalHas = !!rp && rp.homeGoals != null;
+    const rivalScore = rivalHas && locked ? `${rp!.homeGoals}–${rp!.awayGoals}` : null;
+    return {
+      id: p.id,
+      stage: p.match.stage,
+      groupCode: p.match.group?.code ?? null,
+      home: tn(p.match.homeTeamId),
+      away: tn(p.match.awayTeamId),
+      viewerScore,
+      rivalScore,
+      rivalHidden: rivalHas && !locked,
+      agree: rivalScore != null && rivalScore === viewerScore,
+    };
+  });
+
+  const lite = (p: typeof viewer): ParticipantLite => ({
+    id: p.id, name: p.name, nickname: p.nickname, initials: p.initials, accentColor: p.accentColor, avatarId: p.avatarId, favoriteTeamId: p.favoriteTeamId,
+  });
+  const agreeCount = matches.filter((m) => m.agree).length;
+  const differCount = matches.filter((m) => m.rivalScore != null && !m.agree).length;
+
+  return {
+    viewer: lite(viewer),
+    rival: lite(rival),
+    rivalRevealed: tourLocked,
+    scalars,
+    groups,
+    matches,
+    matchSummary: { agree: agreeCount, differ: differCount, hidden: matches.filter((m) => m.rivalHidden).length, total: matches.length },
+  };
 }
 

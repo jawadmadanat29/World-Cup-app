@@ -4,7 +4,6 @@
 // idempotent PointTransaction rows.
 
 import type { Outcome } from "../enums";
-import { rangeContains } from "./ranges";
 import { ruleEnabled, ruleValue, type RuleMap } from "./rules";
 
 /** A single point award produced by the engine. */
@@ -337,10 +336,7 @@ export interface TournamentPredictionInput {
   disappointingTeamId?: string | null;
   highestScoringTeamId?: string | null;
   bestDefensiveTeamId?: string | null;
-  totalGoalsRange?: string | null;
   finalPenaltyShootout?: boolean | null;
-  redCardRange?: string | null;
-  hatTrickRange?: string | null;
 }
 
 export interface TournamentActualInput {
@@ -355,10 +351,7 @@ export interface TournamentActualInput {
   disappointingTeamId?: string | null;
   highestScoringTeamId?: string | null;
   bestDefensiveTeamId?: string | null;
-  totalGoals?: number | null;
   finalWentToPens?: boolean | null;
-  redCards?: number | null;
-  hatTricks?: number | null;
 }
 
 export function scoreTournament(
@@ -403,14 +396,8 @@ export function scoreTournament(
   if (eq(pred.bestDefensiveTeamId, actual.bestDefensiveTeamId))
     a.push({ category: "TOURNAMENT", source: "TOURNAMENT_BEST_DEFENSIVE", points: ruleValue(rules, "TOURNAMENT_BEST_DEFENSIVE"), reason: "Correct best defensive team" });
 
-  if (pred.totalGoalsRange && actual.totalGoals != null && rangeContains(pred.totalGoalsRange, actual.totalGoals))
-    a.push({ category: "TOURNAMENT", source: "TOURNAMENT_TOTAL_GOALS_RANGE", points: ruleValue(rules, "TOURNAMENT_TOTAL_GOALS_RANGE"), reason: `Correct total goals range (${pred.totalGoalsRange})` });
   if (pred.finalPenaltyShootout != null && actual.finalWentToPens != null && pred.finalPenaltyShootout === actual.finalWentToPens)
     a.push({ category: "TOURNAMENT", source: "TOURNAMENT_FINAL_PENS", points: ruleValue(rules, "TOURNAMENT_FINAL_PENS"), reason: "Correct final-shootout prediction" });
-  if (pred.redCardRange && actual.redCards != null && rangeContains(pred.redCardRange, actual.redCards))
-    a.push({ category: "TOURNAMENT", source: "TOURNAMENT_RED_CARD_RANGE", points: ruleValue(rules, "TOURNAMENT_RED_CARD_RANGE"), reason: `Correct red-card range (${pred.redCardRange})` });
-  if (pred.hatTrickRange && actual.hatTricks != null && rangeContains(pred.hatTrickRange, actual.hatTricks))
-    a.push({ category: "TOURNAMENT", source: "TOURNAMENT_HATTRICK_RANGE", points: ruleValue(rules, "TOURNAMENT_HATTRICK_RANGE"), reason: `Correct hat-trick range (${pred.hatTrickRange})` });
 
   return a;
 }

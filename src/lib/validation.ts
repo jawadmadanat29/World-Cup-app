@@ -90,10 +90,7 @@ export const tournamentPredictionSchema = z.object({
   disappointingTeamId: optStr,
   highestScoringTeamId: optStr,
   bestDefensiveTeamId: optStr,
-  totalGoalsRange: optStr,
   finalPenaltyShootout: optBool,
-  redCardRange: optStr,
-  hatTrickRange: optStr,
 });
 export type TournamentPredictionInputForm = z.infer<typeof tournamentPredictionSchema>;
 

@@ -248,10 +248,7 @@ export async function recomputeTournamentAndAwards(db: PrismaClient): Promise<nu
     disappointingTeamId: tr?.disappointingTeamId ?? null,
     highestScoringTeamId: tr?.highestScoringTeamId ?? highestScoringTeam(tallies),
     bestDefensiveTeamId: tr?.bestDefensiveTeamId ?? bestDefensiveTeam(tallies),
-    totalGoals: tr?.totalGoals ?? tallies.totalGoals,
     finalWentToPens: tr?.finalWentToPens ?? null,
-    redCards: tr?.redCards ?? null,
-    hatTricks: tr?.hatTricks ?? null,
   };
 
   const rows: TxnRow[] = [];
@@ -273,10 +270,7 @@ export async function recomputeTournamentAndAwards(db: PrismaClient): Promise<nu
             disappointingTeamId: p.disappointingTeamId,
             highestScoringTeamId: p.highestScoringTeamId,
             bestDefensiveTeamId: p.bestDefensiveTeamId,
-            totalGoalsRange: p.totalGoalsRange,
             finalPenaltyShootout: p.finalPenaltyShootout,
-            redCardRange: p.redCardRange,
-            hatTrickRange: p.hatTrickRange,
           },
           actual,
           rules,

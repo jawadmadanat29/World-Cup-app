@@ -236,10 +236,7 @@ describe("scoreTournament (sections D/E)", () => {
         disappointingTeamId: null,
         highestScoringTeamId: null,
         bestDefensiveTeamId: null,
-        totalGoalsRange: "140-159",
         finalPenaltyShootout: true,
-        redCardRange: null,
-        hatTrickRange: null,
       },
       {
         championTeamId: "A",
@@ -253,15 +250,12 @@ describe("scoreTournament (sections D/E)", () => {
         disappointingTeamId: "X",
         highestScoringTeamId: "Y",
         bestDefensiveTeamId: "Z",
-        totalGoals: 150,
         finalWentToPens: true,
-        redCards: 5,
-        hatTricks: 1,
       },
       R,
     );
-    // champion 25 + finalist 15 + SF (A,B,C correct, Z wrong) 30 + QF (A,B,C,D) 24
-    // + surprise 5 + total goals 5 + final pens 3 = 107
+    // champion 30 + finalist 15 + SF (A,B,C correct, Z wrong) 30 + QF (A,B,C,D) 24
+    // + surprise 5 + final pens 3 = 107
     expect(sumAwards(a)).toBe(107);
   });
 });

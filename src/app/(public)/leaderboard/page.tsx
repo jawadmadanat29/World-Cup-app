@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Activity, Sparkles, Trophy, MessageSquare } from "lucide-react";
+import { Activity, Sparkles, Trophy, MessageSquare, Target, Crown } from "lucide-react";
 import { getLeaderboard, getTeamMap, getLatestPredictions } from "@/lib/queries";
 import { getCurrentParticipantId } from "@/lib/auth";
 import { PageHeader } from "@/components/domain/page-header";
@@ -14,10 +14,11 @@ import { cn } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Leaderboard" };
 
-const FEED_ICON = { MATCH: Activity, WILDCARD: Sparkles, TOURNAMENT: Trophy, BOLD: MessageSquare } as const;
+const FEED_ICON = { MATCH: Activity, WILDCARD: Sparkles, TOURNAMENT: Trophy, BOLD: MessageSquare, EXACT: Target, LEAD: Crown } as const;
 
 export default async function LeaderboardPage() {
-  const [rows, teamMap, meId, feed] = await Promise.all([getLeaderboard(), getTeamMap(), getCurrentParticipantId(), getLatestPredictions(15)]);
+  const [rows, teamMap, meId] = await Promise.all([getLeaderboard(), getTeamMap(), getCurrentParticipantId()]);
+  const feed = await getLatestPredictions(15, rows);
   const favIso = (id: string | null) => (id ? teamMap.get(id)?.isoCode ?? null : null);
 
   return (

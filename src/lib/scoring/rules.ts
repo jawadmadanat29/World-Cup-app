@@ -55,7 +55,7 @@ export const DEFAULT_SCORING_RULES: ScoringRuleDef[] = [
   { key: "KO_PRE_QF", category: "KNOCKOUT_PRE", label: "Correct quarter-finalist", value: 6, enabled: true },
   { key: "KO_PRE_SF", category: "KNOCKOUT_PRE", label: "Correct semi-finalist", value: 10, enabled: true },
   { key: "KO_PRE_FINAL", category: "KNOCKOUT_PRE", label: "Correct finalist", value: 15, enabled: true },
-  { key: "KO_PRE_CHAMPION", category: "KNOCKOUT_PRE", label: "Correct champion", value: 25, enabled: true },
+  { key: "KO_PRE_CHAMPION", category: "KNOCKOUT_PRE", label: "Correct champion", value: 30, enabled: true },
   { key: "KO_PRE_THIRD", category: "KNOCKOUT_PRE", label: "Correct third-place winner", value: 8, enabled: true },
 
   // ---- Stage-by-stage knockout (section D stage) — wired for future use ----
@@ -66,15 +66,12 @@ export const DEFAULT_SCORING_RULES: ScoringRuleDef[] = [
   { key: "KO_STAGE_THIRD", category: "KNOCKOUT_STAGE", label: "Correct third-place winner (stage-by-stage)", value: 6, enabled: true },
   { key: "KO_STAGE_FINAL", category: "KNOCKOUT_STAGE", label: "Correct final winner (stage-by-stage)", value: 18, enabled: true },
 
-  // ---- Tournament extras (section E, team/range awards) ----
+  // ---- Tournament extras (section E, team awards) ----
   { key: "TOURNAMENT_SURPRISE_TEAM", category: "TOURNAMENT", label: "Correct surprise team", value: 5, enabled: true },
   { key: "TOURNAMENT_DISAPPOINTING_TEAM", category: "TOURNAMENT", label: "Correct most disappointing team", value: 5, enabled: true },
   { key: "TOURNAMENT_HIGHEST_SCORING", category: "TOURNAMENT", label: "Correct highest-scoring team", value: 8, enabled: true },
   { key: "TOURNAMENT_BEST_DEFENSIVE", category: "TOURNAMENT", label: "Correct best defensive team", value: 8, enabled: true },
-  { key: "TOURNAMENT_TOTAL_GOALS_RANGE", category: "TOURNAMENT", label: "Correct total tournament goals range", value: 5, enabled: true },
   { key: "TOURNAMENT_FINAL_PENS", category: "TOURNAMENT", label: "Correct final penalty-shootout prediction", value: 3, enabled: true },
-  { key: "TOURNAMENT_RED_CARD_RANGE", category: "TOURNAMENT", label: "Correct red-card range", value: 3, enabled: true },
-  { key: "TOURNAMENT_HATTRICK_RANGE", category: "TOURNAMENT", label: "Correct hat-trick range", value: 3, enabled: true },
 
   // ---- Player awards (section E) ----
   { key: "AWARD_GOLDEN_BOOT", category: "AWARD", label: "Correct Golden Boot", value: 15, enabled: true },
