@@ -37,7 +37,16 @@
       "Bash(git push *)",
       "Bash(echo \"ADMIN_PASSWORD suggestion: wc-$\\(openssl rand -hex 4\\)\")",
       "Bash(git add *)",
-      "Bash(git commit -q -m ' *)"
+      "Bash(git commit -q -m ' *)",
+      "Bash(curl -s -I \"https://world-cup-jawad.vercel.app/\")",
+      "Bash(curl -s \"https://world-cup-jawad.vercel.app/\")",
+      "Bash(curl -sS -m 20 -o /dev/null -w \"dns:%{time_namelookup}s connect:%{time_connect}s http:%{http_code}\\\\n\" \"https://world-cup-jawad.vercel.app/\")",
+      "Bash(curl -sSL -m 20 -A \"Mozilla/5.0\" -o /dev/null -w \"final http:%{http_code} url:%{url_effective}\\\\n\" \"https://world-cup-jawad.vercel.app/\")",
+      "Bash(curl -sS -m 15 -o /dev/null -w \"github.com http:%{http_code}\\\\n\" \"https://github.com\")",
+      "Bash(curl -s 'https://v3.football.api-sports.io/fixtures?league=1&season=2022' -H 'x-apisports-key: f312ddb3cfd28bd809d8386264cc45c8' -o /tmp/wc.json)",
+      "Bash(python3 -c ' *)",
+      "Bash(rm -f /tmp/wc.json)",
+      "Bash(git commit -q -m 'Add post-launch improvements spec \\(3 phases\\) *)"
     ]
   }
 }
