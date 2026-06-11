@@ -37,10 +37,9 @@ export function MatchPredictionForm({
   lockState: LockState;
   existing: {
     homeGoals: number | null; awayGoals: number | null; advanceTeamId: string | null;
-    predictExtraTime: boolean | null; predictPenalties: boolean | null; penaltyHome: number | null; penaltyAway: number | null;
     firstTeamToScore: string | null; bttsPrediction: boolean | null; cleanSheetPrediction: boolean | null;
     wildcardPick: string | null; confidence: string | null;
-    anytimeScorerPlayerIds: string[]; assistPlayerIds: string[]; multiScorerPlayerIds: string[];
+    anytimeScorerPlayerIds: string[];
   } | null;
   wildcardApplied: boolean;
   wildcardsRemaining: number;
@@ -52,14 +51,10 @@ export function MatchPredictionForm({
   const [homeGoals, setHomeGoals] = React.useState(e?.homeGoals != null ? String(e.homeGoals) : "");
   const [awayGoals, setAwayGoals] = React.useState(e?.awayGoals != null ? String(e.awayGoals) : "");
   const [advance, setAdvance] = React.useState(e?.advanceTeamId ?? "");
-  const [et, setEt] = React.useState(triToStr(e?.predictExtraTime));
-  const [pens, setPens] = React.useState(triToStr(e?.predictPenalties));
   const [firstTeam, setFirstTeam] = React.useState(e?.firstTeamToScore ?? NONE);
   const [btts, setBtts] = React.useState(triToStr(e?.bttsPrediction));
   const [clean, setClean] = React.useState(triToStr(e?.cleanSheetPrediction));
-  const [anytime, setAnytime] = React.useState<string[]>([e?.anytimeScorerPlayerIds[0] ?? NONE, e?.anytimeScorerPlayerIds[1] ?? NONE]);
-  const [assists, setAssists] = React.useState<string[]>([e?.assistPlayerIds[0] ?? NONE, e?.assistPlayerIds[1] ?? NONE]);
-  const [multi, setMulti] = React.useState(e?.multiScorerPlayerIds[0] ?? NONE);
+  const [anytime, setAnytime] = React.useState(e?.anytimeScorerPlayerIds[0] ?? NONE);
   const [boldCall, setBoldCall] = React.useState(e?.wildcardPick ?? "");
   const [confidence, setConfidence] = React.useState(e?.confidence ?? NONE);
   const [useWildcard, setUseWildcard] = React.useState(wildcardApplied);
@@ -73,18 +68,13 @@ export function MatchPredictionForm({
     homeGoals !== "" && awayGoals !== "" ? (Number(homeGoals) > Number(awayGoals) ? match.home?.name : Number(homeGoals) < Number(awayGoals) ? match.away?.name : "Draw") : null;
   const locked = lockState === "LOCKED" || lockState === "COMPLETED";
 
-  const anytimeCount = anytime.filter((x) => x !== NONE).length;
-  const assistCount = assists.filter((x) => x !== NONE).length;
-
-  // Completeness checklist (Q2 — advanced predictions are mandatory to maximise points).
+  // Completeness checklist — these bonus picks maximise your points.
   const checks = [
     { label: "Predicted score", done: homeGoals !== "" && awayGoals !== "" },
     { label: "First team to score", done: firstTeam !== NONE },
     { label: "Both teams to score", done: btts !== "unset" },
     { label: "Clean sheet", done: clean !== "unset" },
-    { label: "2 any-time goalscorers", done: anytimeCount === 2 },
-    { label: "2 assist providers", done: assistCount === 2 },
-    { label: "Multi-goal scorer", done: multi !== NONE },
+    { label: "Any-time goalscorer", done: anytime !== NONE },
   ];
   const doneCount = checks.filter((c) => c.done).length;
   const complete = doneCount === checks.length;
@@ -103,7 +93,6 @@ export function MatchPredictionForm({
 
   function submit() {
     if (homeGoals === "" || awayGoals === "") { toast.error("Enter a predicted score."); return; }
-    if (anytimeCount > 2) { toast.error("Pick at most 2 any-time scorers."); return; }
     start(async () => {
       const res = await action({
         participantId,
@@ -111,14 +100,10 @@ export function MatchPredictionForm({
         homeGoals: Number(homeGoals),
         awayGoals: Number(awayGoals),
         advanceTeamId: match.isKnockout && advance ? advance : undefined,
-        predictExtraTime: match.isKnockout ? strToTri(et) : undefined,
-        predictPenalties: match.isKnockout ? strToTri(pens) : undefined,
         firstTeamToScore: firstTeam === NONE ? undefined : (firstTeam as "HOME" | "AWAY" | "NONE"),
         bttsPrediction: strToTri(btts),
         cleanSheetPrediction: strToTri(clean),
-        anytimeScorerPlayerIds: anytime.filter((x) => x !== NONE),
-        assistPlayerIds: assists.filter((x) => x !== NONE),
-        multiScorerPlayerIds: multi === NONE ? [] : [multi],
+        anytimeScorerPlayerIds: anytime === NONE ? [] : [anytime],
         wildcardPick: boldCall || undefined,
         confidence: confidence === NONE ? "" : (confidence as (typeof CONFIDENCE_LEVELS)[number]),
         applyWildcard: useWildcard,
@@ -168,10 +153,7 @@ export function MatchPredictionForm({
                   {match.away && <SelectItem value={match.away.id}>{match.away.name}</SelectItem>}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <TriField label="Extra time?" value={et} onChange={setEt} disabled={readOnly} />
-              <TriField label="Penalties?" value={pens} onChange={setPens} disabled={readOnly} />
+              <p className="text-xs text-muted-foreground">Just pick who goes through — extra time or penalties don’t matter.</p>
             </div>
           </CardContent>
         </Card>
@@ -210,20 +192,9 @@ export function MatchPredictionForm({
           </div>
 
           <div className="space-y-1.5">
-            <Label>Any-time goalscorers (pick 2)</Label>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {anytime.map((v, i) => <PlayerSelect key={i} value={v} onChange={(nv) => setAnytime((a) => a.map((x, idx) => (idx === i ? nv : x)))} />)}
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Assist providers (pick 2)</Label>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {assists.map((v, i) => <PlayerSelect key={i} value={v} onChange={(nv) => setAssists((a) => a.map((x, idx) => (idx === i ? nv : x)))} />)}
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Multi-goal scorer (player to score 2+)</Label>
-            <PlayerSelect value={multi} onChange={setMulti} />
+            <Label>Any-time goalscorer</Label>
+            <PlayerSelect value={anytime} onChange={setAnytime} />
+            <p className="text-xs text-muted-foreground">Pick one player you think will score at any point in the match.</p>
           </div>
         </CardContent>
       </Card>
@@ -274,7 +245,7 @@ export function MatchPredictionForm({
           <DialogHeader>
             <DialogTitle>Use a wildcard on this match?</DialogTitle>
             <DialogDescription>
-              A wildcard <b>doubles the result points</b> (outcome + exact/GD/total) you earn from this match —
+              A wildcard <b>doubles the result points</b> (correct result + exact score) you earn from this match —
               it does not affect the bonus picks. You have <b>{wildcardsRemaining}</b> wildcard{wildcardsRemaining === 1 ? "" : "s"} left
               for the whole tournament, so spend them on matches you’re most confident about. You can switch it off again until the match locks.
             </DialogDescription>

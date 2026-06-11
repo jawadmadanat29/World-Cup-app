@@ -1,7 +1,6 @@
-// Single source of truth for what makes a match prediction "complete" (Q2).
-// Advanced picks are mandatory: a prediction only counts as complete when the
-// score, the three yes/no/team calls, AND exactly 2 any-time scorers + 2 assist
-// providers + 1 multi-goal scorer are all set. Bold Call is never required.
+// Single source of truth for what makes a match prediction "complete".
+// A prediction counts as complete when the score, the three yes/no/team calls,
+// and the any-time goalscorer pick are all set. Bold Call is never required.
 // Used by the predictions page, the home progress card, and profiles.
 
 export interface MatchPredLike {
@@ -26,9 +25,7 @@ export function matchPredictionChecklist(p: MatchPredLike | null | undefined): C
     { key: "first", label: "First team to score", done: !!p && p.firstTeamToScore != null },
     { key: "btts", label: "Both teams to score", done: !!p && p.bttsPrediction != null },
     { key: "clean", label: "Clean sheet", done: !!p && p.cleanSheetPrediction != null },
-    { key: "anytime", label: "2 any-time scorers", done: count("ANYTIME") === 2 },
-    { key: "assist", label: "2 assist providers", done: count("ASSIST") === 2 },
-    { key: "multi", label: "Multi-goal scorer", done: count("MULTI") === 1 },
+    { key: "anytime", label: "Any-time goalscorer", done: count("ANYTIME") >= 1 },
   ];
 }
 

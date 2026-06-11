@@ -8,7 +8,7 @@ import { ruleEnabled, ruleValue, type RuleMap } from "./rules";
 
 /** A single point award produced by the engine. */
 export interface Award {
-  category: "MATCH" | "GROUP" | "KNOCKOUT_PRE" | "KNOCKOUT_STAGE" | "TOURNAMENT" | "AWARD" | "WILDCARD";
+  category: "MATCH" | "GROUP" | "KNOCKOUT_PRE" | "AWARD" | "WILDCARD";
   source: string;
   points: number;
   reason: string;
@@ -34,16 +34,9 @@ export function outcomeOf(line: ScoreLine): Outcome {
 export interface ActualMatch {
   ftHome: number;
   ftAway: number;
-  wentToExtraTime: boolean;
-  wentToPenalties: boolean;
-  pensHome?: number | null;
-  pensAway?: number | null;
+  /** Knockout winner (who advanced), regardless of FT/AET/penalties. */
   advancingTeamId?: string | null;
-  firstScorerPlayerId?: string | null;
   scorerPlayerIds: string[];
-  /** Players who scored 2+ goals in this match. */
-  multiScorerPlayerIds: string[];
-  assistPlayerIds: string[];
   firstTeamToScore: "HOME" | "AWAY" | "NONE";
 }
 
@@ -51,24 +44,17 @@ export interface MatchPredictionInput {
   homeGoals?: number | null;
   awayGoals?: number | null;
   advanceTeamId?: string | null;
-  predictExtraTime?: boolean | null;
-  predictPenalties?: boolean | null;
-  penaltyHome?: number | null;
-  penaltyAway?: number | null;
   firstTeamToScore?: string | null;
   bttsPrediction?: boolean | null;
   cleanSheetPrediction?: boolean | null;
-  firstScorerPlayerId?: string | null;
   anytimeScorerPlayerIds: string[];
-  assistPlayerIds: string[];
-  multiScorerPlayerIds: string[];
   wildcardApplied: boolean;
   isKnockout: boolean;
 }
 
 /**
- * Section A — the "result" points (outcome + exact/GD/total). Returned
- * separately because the wildcard doubles ONLY these.
+ * The "result" points: correct outcome, plus an exact-score bonus on top.
+ * Returned separately because the wildcard doubles ONLY these.
  */
 export function scoreMatchResult(
   pred: ScoreLine,
@@ -84,40 +70,21 @@ export function scoreMatchResult(
     category: "MATCH",
     source: "MATCH_OUTCOME",
     points: ruleValue(rules, "MATCH_OUTCOME"),
-    reason: `Correct outcome (${actOut.toLowerCase()})`,
+    reason: `Correct result (${actOut.toLowerCase()})`,
   });
 
-  const exact = pred.home === actual.home && pred.away === actual.away;
-  if (exact) {
+  if (pred.home === actual.home && pred.away === actual.away) {
     awards.push({
       category: "MATCH",
       source: "MATCH_EXACT",
       points: ruleValue(rules, "MATCH_EXACT"),
       reason: `Exact score ${actual.home}-${actual.away}`,
     });
-  } else {
-    // GD and total bonuses are independent and cannot both apply unless exact.
-    if (pred.home - pred.away === actual.home - actual.away) {
-      awards.push({
-        category: "MATCH",
-        source: "MATCH_GD",
-        points: ruleValue(rules, "MATCH_GD"),
-        reason: "Correct goal difference",
-      });
-    }
-    if (pred.home + pred.away === actual.home + actual.away) {
-      awards.push({
-        category: "MATCH",
-        source: "MATCH_TOTAL",
-        points: ruleValue(rules, "MATCH_TOTAL"),
-        reason: "Correct total goals",
-      });
-    }
   }
   return awards;
 }
 
-/** Sections A (knockout) + B — bonuses that are NOT doubled by a wildcard. */
+/** Match bonuses — NOT doubled by a wildcard. */
 export function scoreMatchBonuses(
   pred: MatchPredictionInput,
   actual: ActualMatch,
@@ -134,42 +101,12 @@ export function scoreMatchBonuses(
     awards.push({ category: "MATCH", source: "BONUS_FIRST_TO_SCORE", points: ruleValue(rules, "BONUS_FIRST_TO_SCORE"), reason: "Correct first team to score" });
   }
 
-  // First goalscorer
-  if (
-    ruleEnabled(rules, "BONUS_FIRST_SCORER") &&
-    pred.firstScorerPlayerId &&
-    actual.firstScorerPlayerId &&
-    pred.firstScorerPlayerId === actual.firstScorerPlayerId
-  ) {
-    awards.push({ category: "MATCH", source: "BONUS_FIRST_SCORER", points: ruleValue(rules, "BONUS_FIRST_SCORER"), reason: "Correct first goalscorer", ref: pred.firstScorerPlayerId });
-  }
-
-  // Any-time goalscorers (per correct player)
+  // Any-time goalscorer (the single picked player scored at any point)
   if (ruleEnabled(rules, "BONUS_ANYTIME_SCORER")) {
     const scorers = new Set(actual.scorerPlayerIds);
     for (const pid of new Set(pred.anytimeScorerPlayerIds)) {
       if (scorers.has(pid)) {
         awards.push({ category: "MATCH", source: "BONUS_ANYTIME_SCORER", points: ruleValue(rules, "BONUS_ANYTIME_SCORER"), reason: "Correct any-time goalscorer", ref: pid });
-      }
-    }
-  }
-
-  // Assist providers (per correct player)
-  if (ruleEnabled(rules, "BONUS_ASSIST")) {
-    const assisters = new Set(actual.assistPlayerIds);
-    for (const pid of new Set(pred.assistPlayerIds)) {
-      if (assisters.has(pid)) {
-        awards.push({ category: "MATCH", source: "BONUS_ASSIST", points: ruleValue(rules, "BONUS_ASSIST"), reason: "Correct assist provider", ref: pid });
-      }
-    }
-  }
-
-  // Multi-goal scorer (predicted player who actually scored 2+ goals)
-  if (ruleEnabled(rules, "BONUS_MULTI_SCORER")) {
-    const multi = new Set(actual.multiScorerPlayerIds);
-    for (const pid of new Set(pred.multiScorerPlayerIds)) {
-      if (multi.has(pid)) {
-        awards.push({ category: "MATCH", source: "BONUS_MULTI_SCORER", points: ruleValue(rules, "BONUS_MULTI_SCORER"), reason: "Correct multi-goal scorer (2+)", ref: pid });
       }
     }
   }
@@ -190,28 +127,10 @@ export function scoreMatchBonuses(
     }
   }
 
-  // Knockout extras
+  // Knockout extra: correct team to advance (however they get there).
   if (pred.isKnockout) {
     if (ruleEnabled(rules, "KO_ADVANCE") && pred.advanceTeamId && actual.advancingTeamId && pred.advanceTeamId === actual.advancingTeamId) {
       awards.push({ category: "MATCH", source: "KO_ADVANCE", points: ruleValue(rules, "KO_ADVANCE"), reason: "Correct team to advance" });
-    }
-    if (ruleEnabled(rules, "KO_EXTRA_TIME") && pred.predictExtraTime != null && pred.predictExtraTime === actual.wentToExtraTime) {
-      awards.push({ category: "MATCH", source: "KO_EXTRA_TIME", points: ruleValue(rules, "KO_EXTRA_TIME"), reason: `Correct extra-time prediction (${actual.wentToExtraTime ? "yes" : "no"})` });
-    }
-    if (ruleEnabled(rules, "KO_PENALTIES") && pred.predictPenalties != null && pred.predictPenalties === actual.wentToPenalties) {
-      awards.push({ category: "MATCH", source: "KO_PENALTIES", points: ruleValue(rules, "KO_PENALTIES"), reason: `Correct penalties prediction (${actual.wentToPenalties ? "yes" : "no"})` });
-    }
-    if (
-      ruleEnabled(rules, "KO_PEN_SCORE") &&
-      actual.wentToPenalties &&
-      pred.penaltyHome != null &&
-      pred.penaltyAway != null &&
-      actual.pensHome != null &&
-      actual.pensAway != null &&
-      pred.penaltyHome === actual.pensHome &&
-      pred.penaltyAway === actual.pensAway
-    ) {
-      awards.push({ category: "MATCH", source: "KO_PEN_SCORE", points: ruleValue(rules, "KO_PEN_SCORE"), reason: `Exact shootout score ${actual.pensHome}-${actual.pensAway}` });
     }
   }
 
@@ -220,8 +139,8 @@ export function scoreMatchBonuses(
 
 /**
  * Full match score. Combines result + bonuses and applies the wildcard, which
- * DOUBLES only the section-A result points (outcome + exact/GD/total) — never
- * goalscorer/assist/cards/knockout bonuses.
+ * DOUBLES only the result points (correct result + exact score) — never the
+ * goalscorer / first-team / both-teams / clean-sheet / advance bonuses.
  */
 export function scoreMatch(
   pred: MatchPredictionInput,
@@ -321,37 +240,23 @@ export function scoreBestThirds(
 }
 
 // ---------------------------------------------------------------------------
-// Tournament predictions (deep rounds -> KNOCKOUT_PRE, extras -> TOURNAMENT)
+// Tournament bracket (one-time): how far each team goes.
 // ---------------------------------------------------------------------------
 
 export interface TournamentPredictionInput {
   championTeamId?: string | null;
   runnerUpTeamId?: string | null;
-  thirdTeamId?: string | null;
-  fourthTeamId?: string | null;
   semifinalistTeamIds: string[];
   quarterfinalistTeamIds: string[];
   roundOf16TeamIds: string[];
-  surpriseTeamId?: string | null;
-  disappointingTeamId?: string | null;
-  highestScoringTeamId?: string | null;
-  bestDefensiveTeamId?: string | null;
-  finalPenaltyShootout?: boolean | null;
 }
 
 export interface TournamentActualInput {
   championTeamId?: string | null;
   runnerUpTeamId?: string | null;
-  thirdTeamId?: string | null;
-  fourthTeamId?: string | null;
   semifinalistTeamIds: string[];
   quarterfinalistTeamIds: string[];
   roundOf16TeamIds: string[];
-  surpriseTeamId?: string | null;
-  disappointingTeamId?: string | null;
-  highestScoringTeamId?: string | null;
-  bestDefensiveTeamId?: string | null;
-  finalWentToPens?: boolean | null;
 }
 
 export function scoreTournament(
@@ -365,11 +270,7 @@ export function scoreTournament(
   if (eq(pred.championTeamId, actual.championTeamId))
     a.push({ category: "KNOCKOUT_PRE", source: "KO_PRE_CHAMPION", points: ruleValue(rules, "KO_PRE_CHAMPION"), reason: "Correct champion" });
   if (eq(pred.runnerUpTeamId, actual.runnerUpTeamId))
-    a.push({ category: "KNOCKOUT_PRE", source: "KO_PRE_FINAL", points: ruleValue(rules, "KO_PRE_FINAL"), reason: "Correct runner-up (finalist)" });
-  if (eq(pred.thirdTeamId, actual.thirdTeamId))
-    a.push({ category: "KNOCKOUT_PRE", source: "KO_PRE_THIRD", points: ruleValue(rules, "KO_PRE_THIRD"), reason: "Correct third place" });
-  if (eq(pred.fourthTeamId, actual.fourthTeamId))
-    a.push({ category: "KNOCKOUT_PRE", source: "KO_PRE_SF", points: ruleValue(rules, "KO_PRE_SF"), reason: "Correct fourth place (semi-finalist)", ref: pred.fourthTeamId! });
+    a.push({ category: "KNOCKOUT_PRE", source: "KO_PRE_FINAL", points: ruleValue(rules, "KO_PRE_FINAL"), reason: "Correct finalist" });
 
   const actualSF = new Set(actual.semifinalistTeamIds);
   for (const t of new Set(pred.semifinalistTeamIds)) {
@@ -387,18 +288,6 @@ export function scoreTournament(
       a.push({ category: "KNOCKOUT_PRE", source: "KO_PRE_R16", points: ruleValue(rules, "KO_PRE_R16"), reason: "Correct Round-of-16 team", ref: t });
   }
 
-  if (eq(pred.surpriseTeamId, actual.surpriseTeamId))
-    a.push({ category: "TOURNAMENT", source: "TOURNAMENT_SURPRISE_TEAM", points: ruleValue(rules, "TOURNAMENT_SURPRISE_TEAM"), reason: "Correct surprise team" });
-  if (eq(pred.disappointingTeamId, actual.disappointingTeamId))
-    a.push({ category: "TOURNAMENT", source: "TOURNAMENT_DISAPPOINTING_TEAM", points: ruleValue(rules, "TOURNAMENT_DISAPPOINTING_TEAM"), reason: "Correct most disappointing team" });
-  if (eq(pred.highestScoringTeamId, actual.highestScoringTeamId))
-    a.push({ category: "TOURNAMENT", source: "TOURNAMENT_HIGHEST_SCORING", points: ruleValue(rules, "TOURNAMENT_HIGHEST_SCORING"), reason: "Correct highest-scoring team" });
-  if (eq(pred.bestDefensiveTeamId, actual.bestDefensiveTeamId))
-    a.push({ category: "TOURNAMENT", source: "TOURNAMENT_BEST_DEFENSIVE", points: ruleValue(rules, "TOURNAMENT_BEST_DEFENSIVE"), reason: "Correct best defensive team" });
-
-  if (pred.finalPenaltyShootout != null && actual.finalWentToPens != null && pred.finalPenaltyShootout === actual.finalWentToPens)
-    a.push({ category: "TOURNAMENT", source: "TOURNAMENT_FINAL_PENS", points: ruleValue(rules, "TOURNAMENT_FINAL_PENS"), reason: "Correct final-shootout prediction" });
-
   return a;
 }
 
@@ -409,11 +298,6 @@ export function scoreTournament(
 const AWARD_RULE_KEY: Record<string, string> = {
   GOLDEN_BOOT: "AWARD_GOLDEN_BOOT",
   TOP_ASSIST: "AWARD_TOP_ASSIST",
-  MVP: "AWARD_MVP",
-  BEST_YOUNG: "AWARD_BEST_YOUNG",
-  BEST_GK: "AWARD_BEST_GK",
-  FIRST_HATTRICK: "AWARD_FIRST_HATTRICK",
-  MOST_GOALS_MATCH: "AWARD_MOST_GOALS_MATCH",
 };
 
 export function scoreAward(

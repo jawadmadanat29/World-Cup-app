@@ -5,9 +5,7 @@ import { toast } from "sonner";
 import { Wand2 } from "lucide-react";
 import { saveOutcomes } from "@/actions/admin-outcomes";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AWARD_TYPES, AWARD_LABELS } from "@/lib/enums";
@@ -18,23 +16,12 @@ const NONE = "none";
 interface Suggestions {
   goldenBootPlayerId: string | null; goldenBootLabel: string | null;
   topAssistPlayerId: string | null; topAssistLabel: string | null;
-  mostGoalsMatchPlayerId: string | null; mostGoalsMatchLabel: string | null;
-  highestScoringTeamId: string | null; highestScoringTeamName: string | null;
-  bestDefensiveTeamId: string | null; bestDefensiveTeamName: string | null;
-  totalGoals: number; redCards: number; hatTricks: number;
 }
 interface Current {
-  championTeamId: string; runnerUpTeamId: string; thirdTeamId: string; fourthTeamId: string;
-  surpriseTeamId: string; disappointingTeamId: string; highestScoringTeamId: string; bestDefensiveTeamId: string;
-  totalGoals: string; finalWentToPens: boolean; redCards: string; hatTricks: string;
+  championTeamId: string;
+  runnerUpTeamId: string;
   awards: Record<string, string>;
 }
-
-const SUGGEST_AWARD: Record<string, "goldenBoot" | "topAssist" | "mostGoalsMatch"> = {
-  GOLDEN_BOOT: "goldenBoot",
-  TOP_ASSIST: "topAssist",
-  MOST_GOALS_MATCH: "mostGoalsMatch",
-};
 
 export function OutcomesForm({
   teams, players, current, suggestions,
@@ -46,27 +33,13 @@ export function OutcomesForm({
 }) {
   const router = useRouter();
   const [pending, start] = React.useTransition();
-  const [f, setF] = React.useState({
-    championTeamId: current.championTeamId || NONE,
-    runnerUpTeamId: current.runnerUpTeamId || NONE,
-    thirdTeamId: current.thirdTeamId || NONE,
-    fourthTeamId: current.fourthTeamId || NONE,
-    surpriseTeamId: current.surpriseTeamId || NONE,
-    disappointingTeamId: current.disappointingTeamId || NONE,
-    highestScoringTeamId: current.highestScoringTeamId || NONE,
-    bestDefensiveTeamId: current.bestDefensiveTeamId || NONE,
-    totalGoals: current.totalGoals,
-    redCards: current.redCards,
-    hatTricks: current.hatTricks,
-  });
-  const [pens, setPens] = React.useState(current.finalWentToPens);
+  const [champion, setChampion] = React.useState(current.championTeamId || NONE);
+  const [runnerUp, setRunnerUp] = React.useState(current.runnerUpTeamId || NONE);
   const [awards, setAwards] = React.useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
     for (const t of AWARD_TYPES) init[t] = current.awards[t] ?? NONE;
     return init;
   });
-
-  const set = (k: keyof typeof f) => (v: string) => setF((p) => ({ ...p, [k]: v }));
 
   function TeamSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
     return (
@@ -83,18 +56,8 @@ export function OutcomesForm({
   function submit() {
     start(async () => {
       const res = await saveOutcomes({
-        championTeamId: f.championTeamId === NONE ? "" : f.championTeamId,
-        runnerUpTeamId: f.runnerUpTeamId === NONE ? "" : f.runnerUpTeamId,
-        thirdTeamId: f.thirdTeamId === NONE ? "" : f.thirdTeamId,
-        fourthTeamId: f.fourthTeamId === NONE ? "" : f.fourthTeamId,
-        surpriseTeamId: f.surpriseTeamId === NONE ? "" : f.surpriseTeamId,
-        disappointingTeamId: f.disappointingTeamId === NONE ? "" : f.disappointingTeamId,
-        highestScoringTeamId: f.highestScoringTeamId === NONE ? "" : f.highestScoringTeamId,
-        bestDefensiveTeamId: f.bestDefensiveTeamId === NONE ? "" : f.bestDefensiveTeamId,
-        totalGoals: f.totalGoals,
-        redCards: f.redCards,
-        hatTricks: f.hatTricks,
-        finalWentToPens: pens,
+        championTeamId: champion === NONE ? "" : champion,
+        runnerUpTeamId: runnerUp === NONE ? "" : runnerUp,
         awards: Object.fromEntries(Object.entries(awards).map(([k, v]) => [k, v === NONE ? "" : v])),
       });
       if (res.ok) { toast.success(res.message); router.refresh(); }
@@ -110,42 +73,21 @@ export function OutcomesForm({
     );
   }
 
+  const awardSuggest: Record<string, { id: string | null; label: string | null }> = {
+    GOLDEN_BOOT: { id: suggestions.goldenBootPlayerId, label: suggestions.goldenBootLabel },
+    TOP_ASSIST: { id: suggestions.topAssistPlayerId, label: suggestions.topAssistLabel },
+  };
+
   return (
     <div className="space-y-5">
       <Card>
-        <CardHeader><CardTitle className="text-base">Final standings</CardTitle></CardHeader>
-        <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Field label="Champion"><TeamSelect value={f.championTeamId} onChange={set("championTeamId")} /></Field>
-          <Field label="Runner-up"><TeamSelect value={f.runnerUpTeamId} onChange={set("runnerUpTeamId")} /></Field>
-          <Field label="Third place"><TeamSelect value={f.thirdTeamId} onChange={set("thirdTeamId")} /></Field>
-          <Field label="Fourth place"><TeamSelect value={f.fourthTeamId} onChange={set("fourthTeamId")} /></Field>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader><CardTitle className="text-base">Team & tournament awards</CardTitle></CardHeader>
-        <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label="Surprise team"><TeamSelect value={f.surpriseTeamId} onChange={set("surpriseTeamId")} /></Field>
-          <Field label="Most disappointing"><TeamSelect value={f.disappointingTeamId} onChange={set("disappointingTeamId")} /></Field>
-          <Field label="Highest-scoring team" hint={suggestions.highestScoringTeamName && <Suggest label={suggestions.highestScoringTeamName} onClick={() => set("highestScoringTeamId")(suggestions.highestScoringTeamId!)} />}>
-            <TeamSelect value={f.highestScoringTeamId} onChange={set("highestScoringTeamId")} />
-          </Field>
-          <Field label="Best defensive team" hint={suggestions.bestDefensiveTeamName && <Suggest label={suggestions.bestDefensiveTeamName} onClick={() => set("bestDefensiveTeamId")(suggestions.bestDefensiveTeamId!)} />}>
-            <TeamSelect value={f.bestDefensiveTeamId} onChange={set("bestDefensiveTeamId")} />
-          </Field>
-          <Field label="Total tournament goals" hint={<Suggest label={String(suggestions.totalGoals)} onClick={() => setF((p) => ({ ...p, totalGoals: String(suggestions.totalGoals) }))} />}>
-            <Input type="number" value={f.totalGoals} onChange={(e) => setF((p) => ({ ...p, totalGoals: e.target.value }))} />
-          </Field>
-          <Field label="Red cards" hint={<Suggest label={String(suggestions.redCards)} onClick={() => setF((p) => ({ ...p, redCards: String(suggestions.redCards) }))} />}>
-            <Input type="number" value={f.redCards} onChange={(e) => setF((p) => ({ ...p, redCards: e.target.value }))} />
-          </Field>
-          <Field label="Hat-tricks" hint={<Suggest label={String(suggestions.hatTricks)} onClick={() => setF((p) => ({ ...p, hatTricks: String(suggestions.hatTricks) }))} />}>
-            <Input type="number" value={f.hatTricks} onChange={(e) => setF((p) => ({ ...p, hatTricks: e.target.value }))} />
-          </Field>
-          <div className="flex items-center justify-between rounded-md border px-3">
-            <Label>Final went to penalties?</Label>
-            <Switch checked={pens} onCheckedChange={setPens} />
-          </div>
+        <CardHeader>
+          <CardTitle className="text-base">Finalists</CardTitle>
+          <p className="text-xs text-muted-foreground">The semi-finalists, quarter-finalists and Round-of-16 teams are derived automatically from the knockout results — you only set the two finalists here.</p>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Champion"><TeamSelect value={champion} onChange={setChampion} /></Field>
+          <Field label="Runner-up (finalist)"><TeamSelect value={runnerUp} onChange={setRunnerUp} /></Field>
         </CardContent>
       </Card>
 
@@ -153,11 +95,9 @@ export function OutcomesForm({
         <CardHeader><CardTitle className="text-base">Player award winners</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           {AWARD_TYPES.map((t) => {
-            const sKey = SUGGEST_AWARD[t];
-            const sLabel = sKey === "goldenBoot" ? suggestions.goldenBootLabel : sKey === "topAssist" ? suggestions.topAssistLabel : sKey === "mostGoalsMatch" ? suggestions.mostGoalsMatchLabel : null;
-            const sId = sKey === "goldenBoot" ? suggestions.goldenBootPlayerId : sKey === "topAssist" ? suggestions.topAssistPlayerId : sKey === "mostGoalsMatch" ? suggestions.mostGoalsMatchPlayerId : null;
+            const s = awardSuggest[t];
             return (
-              <Field key={t} label={AWARD_LABELS[t]} hint={sLabel && sId && <Suggest label={sLabel} onClick={() => setAwards((a) => ({ ...a, [t]: sId }))} />}>
+              <Field key={t} label={AWARD_LABELS[t]} hint={s?.label && s.id && <Suggest label={s.label} onClick={() => setAwards((a) => ({ ...a, [t]: s.id! }))} />}>
                 <Select value={awards[t]} onValueChange={(v) => setAwards((a) => ({ ...a, [t]: v }))}>
                   <SelectTrigger className="h-9"><SelectValue placeholder="Select player" /></SelectTrigger>
                   <SelectContent>

@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import Link from "next/link";
-import { Check, ChevronRight, Lock, Search, Clock } from "lucide-react";
+import { Check, ChevronRight, Search, Clock } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -42,11 +42,10 @@ export function MatchPredictions({ matchdays, totals }: { matchdays: MatchdayGro
     return open[0] ?? null;
   }, [allMatches]);
 
-  // Matches that lock today (in the tournament timezone) and are still open.
-  const lockTodayCount = React.useMemo(() => {
+  // Still-open matches that lock within the next 24 hours (urgency).
+  const lockSoonCount = React.useMemo(() => {
     if (!mounted) return 0;
-    const todayKey = dayKey(new Date());
-    return allMatches.filter((m) => m.editable && dayKey(new Date(m.lockAt)) === todayKey).length;
+    return allMatches.filter((m) => m.editable && +new Date(m.lockAt) - Date.now() <= DAY_MS).length;
   }, [allMatches, mounted]);
 
   const remaining = totals.total - totals.complete;
@@ -99,9 +98,9 @@ export function MatchPredictions({ matchdays, totals }: { matchdays: MatchdayGro
             <span className="text-xs text-muted-foreground">All matches locked</span>
           )}
         </div>
-        {lockTodayCount > 0 && (
+        {lockSoonCount > 0 && (
           <p className="mt-1 text-xs font-medium text-gold">
-            {lockTodayCount} {lockTodayCount === 1 ? "match locks" : "matches lock"} today — get your picks in.
+            {lockSoonCount} {lockSoonCount === 1 ? "match locks" : "matches lock"} within the next 24 hours — get your picks in.
           </p>
         )}
       </div>
@@ -159,31 +158,27 @@ export function MatchPredictions({ matchdays, totals }: { matchdays: MatchdayGro
 }
 
 function MatchRow({ m }: { m: HubMatch }) {
-  const inner = (
-    <div className={cn("flex items-center gap-3 px-4 py-2.5", m.editable || m.predicted ? "transition-colors hover:bg-muted/40" : "opacity-70")}>
-      <Badge variant="secondary" className="hidden shrink-0 sm:inline-flex">
-        {m.stage === "GROUP" && m.groupCode ? m.groupCode : STAGE_SHORT[m.stage as keyof typeof STAGE_SHORT]}
-      </Badge>
-      <span className="w-16 shrink-0 text-xs tabular-nums text-muted-foreground">{timeLabel(m.kickoff)} {TOURNAMENT_TZ_LABEL}</span>
-      <div className="grid min-w-0 flex-1 grid-cols-[1fr_auto_1fr] items-center gap-2">
-        <TeamLabel name={m.home.name} iso={m.home.isoCode} showShort flagSize="sm" className="justify-start" />
-        <span className="text-xs text-muted-foreground">v</span>
-        <TeamLabel name={m.away.name} iso={m.away.isoCode} showShort flagSize="sm" reverse className="justify-end" />
-      </div>
-      {m.lockState === "UPCOMING" ? (
-        <Badge variant="secondary" className="gap-1"><Lock className="h-3 w-3" /> Upcoming</Badge>
-      ) : m.predicted ? (
-        <Badge variant={m.complete ? "default" : "warning"} className="gap-1">
-          <Check className="h-3 w-3" /> {m.score}{!m.complete && " · partial"}
+  return (
+    <Link href={`/predictions/match/${m.id}`}>
+      <div className={cn("flex items-center gap-3 px-4 py-2.5", m.editable || m.predicted ? "transition-colors hover:bg-muted/40" : "opacity-70")}>
+        <Badge variant="secondary" className="hidden shrink-0 sm:inline-flex">
+          {m.stage === "GROUP" && m.groupCode ? m.groupCode : STAGE_SHORT[m.stage as keyof typeof STAGE_SHORT]}
         </Badge>
-      ) : (
-        <StatusBadge state={m.lockState} />
-      )}
-      {m.lockState !== "UPCOMING" && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-    </div>
+        <span className="w-16 shrink-0 text-xs tabular-nums text-muted-foreground">{timeLabel(m.kickoff)} {TOURNAMENT_TZ_LABEL}</span>
+        <div className="grid min-w-0 flex-1 grid-cols-[1fr_auto_1fr] items-center gap-2">
+          <TeamLabel name={m.home.name} iso={m.home.isoCode} showShort flagSize="sm" className="justify-start" />
+          <span className="text-xs text-muted-foreground">v</span>
+          <TeamLabel name={m.away.name} iso={m.away.isoCode} showShort flagSize="sm" reverse className="justify-end" />
+        </div>
+        {m.predicted ? (
+          <Badge variant={m.complete ? "default" : "warning"} className="gap-1">
+            <Check className="h-3 w-3" /> {m.score}{!m.complete && " · partial"}
+          </Badge>
+        ) : (
+          <StatusBadge state={m.lockState} />
+        )}
+        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+      </div>
+    </Link>
   );
-  if (m.lockState === "UPCOMING") {
-    return <div title="Opens when the previous matchday ends">{inner}</div>;
-  }
-  return <Link href={`/predictions/match/${m.id}`}>{inner}</Link>;
 }

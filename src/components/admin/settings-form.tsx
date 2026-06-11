@@ -16,7 +16,7 @@ import { signedPts } from "@/lib/format";
 export function SettingsForm({
   config, participants, adjustments,
 }: {
-  config: { matchLockBufferMinutes: number; closingSoonMinutes: number; wildcardsPerParticipant: number; tournamentName: string };
+  config: { wildcardsPerParticipant: number; tournamentName: string };
   participants: ParticipantLite[];
   adjustments: { id: string; participantId: string; points: number; reason: string }[];
 }) {
@@ -62,13 +62,8 @@ export function SettingsForm({
             <Label htmlFor="tn">Tournament name</Label>
             <Input id="tn" value={c.tournamentName} onChange={(e) => setC({ ...c, tournamentName: e.target.value })} />
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="buf">Lock buffer (minutes before kickoff)</Label>
-            <Input id="buf" type="number" min={0} value={c.matchLockBufferMinutes} onChange={(e) => setC({ ...c, matchLockBufferMinutes: Number(e.target.value) })} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="cs">“Closing soon” window (minutes)</Label>
-            <Input id="cs" type="number" min={0} value={c.closingSoonMinutes} onChange={(e) => setC({ ...c, closingSoonMinutes: Number(e.target.value) })} />
+          <div className="space-y-1.5 sm:col-span-2">
+            <p className="rounded-md bg-secondary/40 px-3 py-2 text-xs text-muted-foreground">Matches lock automatically at their exact kickoff time — there’s nothing to configure.</p>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="wc">Wildcards per participant</Label>

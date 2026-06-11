@@ -18,7 +18,7 @@ export default async function AwardsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Player awards" description="Golden Boot, Player of the Tournament and more — every friend’s pick." eyebrow="Individual awards" />
+      <PageHeader title="Player awards" description="Golden Boot and Top Assister — every friend’s pick." eyebrow="Individual awards" />
 
       {hasAny ? (
         <div className="grid gap-4 md:grid-cols-2">

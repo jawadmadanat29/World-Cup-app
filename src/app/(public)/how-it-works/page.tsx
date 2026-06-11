@@ -70,9 +70,9 @@ export default async function HowItWorksPage() {
               <ul className="space-y-1.5">
                 <li className="flex gap-2"><ListOrdered className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> Final order of all 12 groups</li>
                 <li className="flex gap-2"><Network className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> Who reaches the Round of 16, quarters, semis & final</li>
-                <li className="flex gap-2"><Trophy className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> Champion, runner-up, 3rd & 4th</li>
-                <li className="flex gap-2"><Goal className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> Best third-placed qualifiers + surprise/disappointment teams</li>
-                <li className="flex gap-2"><Medal className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> Top scorer, top assister & Player of the Tournament</li>
+                <li className="flex gap-2"><Trophy className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> Champion & runner-up</li>
+                <li className="flex gap-2"><Goal className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> The 8 best third-placed qualifiers</li>
+                <li className="flex gap-2"><Medal className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> Golden Boot (top scorer) & Top Assister</li>
               </ul>
               <p className="rounded-md bg-secondary/50 px-3 py-2 text-foreground"><Lock className="mr-1 inline h-3.5 w-3.5" /> Locks when the opening match kicks off — set it before then.</p>
             </CardContent>
@@ -85,10 +85,10 @@ export default async function HowItWorksPage() {
             <CardContent className="space-y-3 text-sm text-muted-foreground">
               <p>For <b className="text-foreground">each match</b>, predict the score — and optionally go deeper:</p>
               <ul className="space-y-1.5">
-                <li className="flex gap-2"><Goal className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> Exact score (the more precise, the more points)</li>
-                <li className="flex gap-2"><Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> First & any-time goalscorers, assists, both-teams-to-score</li>
-                <li className="flex gap-2"><ListChecks className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> Total goals / cards ranges, clean sheets</li>
-                <li className="flex gap-2"><Trophy className="mt-0.5 h-4 w-4 shrink-0 text-gold" /> Knockouts: who advances, extra time, penalties</li>
+                <li className="flex gap-2"><Goal className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> Exact score (a bonus on top of the correct result)</li>
+                <li className="flex gap-2"><Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> Any-time goalscorer, first team to score, both teams to score</li>
+                <li className="flex gap-2"><ListChecks className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> Clean sheets</li>
+                <li className="flex gap-2"><Trophy className="mt-0.5 h-4 w-4 shrink-0 text-gold" /> Knockouts: just pick who advances (extra time & penalties don’t matter)</li>
                 <li className="flex gap-2"><Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-gold" /> Play a <b className="text-foreground">wildcard</b> to double a match’s result points</li>
               </ul>
               <p className="rounded-md bg-secondary/50 px-3 py-2 text-foreground"><Lock className="mr-1 inline h-3.5 w-3.5" /> Each match locks at its kickoff — keep coming back through the tournament.</p>
@@ -102,9 +102,9 @@ export default async function HowItWorksPage() {
         <Card>
           <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Lock className="h-4 w-4 text-primary" /> Locking & fair play</CardTitle></CardHeader>
           <CardContent className="space-y-2 text-sm text-muted-foreground">
-            <div>You can edit a prediction freely until it locks. Watch the badges: <Badge variant="teal" className="mx-0.5">Open</Badge> → <Badge variant="warning" className="mx-0.5">Closing soon</Badge> → <Badge variant="destructive" className="mx-0.5">Locked</Badge>.</div>
+            <div>Every match stays fully editable right up to its <b className="text-foreground">kickoff</b>. Watch the badges: <Badge variant="teal" className="mx-0.5">Open</Badge> → <Badge variant="warning" className="mx-0.5">Upcoming</Badge> (within 24h, still editable) → <Badge variant="destructive" className="mx-0.5">Locked</Badge> at kickoff.</div>
             <p className="flex gap-2"><Eye className="mt-0.5 h-4 w-4 shrink-0" /> To keep it fair, <b className="text-foreground">everyone’s picks stay hidden until a match locks</b> — then they’re revealed for comparison.</p>
-            <p>No edits after lock. Simple as that.</p>
+            <p>No edits after kickoff. Simple as that.</p>
           </CardContent>
         </Card>
         <Card>

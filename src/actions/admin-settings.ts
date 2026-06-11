@@ -16,8 +16,6 @@ export async function updateSettings(input: z.input<typeof settingsSchema>): Pro
     if (!parsed.success) return fail(parsed.error.errors[0]?.message ?? "Invalid settings.");
     const d = parsed.data;
     await Promise.all([
-      setSetting(SETTINGS.MATCH_LOCK_BUFFER_MINUTES, String(d.matchLockBufferMinutes)),
-      setSetting(SETTINGS.CLOSING_SOON_MINUTES, String(d.closingSoonMinutes)),
       setSetting(SETTINGS.WILDCARDS_PER_PARTICIPANT, String(d.wildcardsPerParticipant)),
       setSetting(SETTINGS.TOURNAMENT_NAME, d.tournamentName),
     ]);

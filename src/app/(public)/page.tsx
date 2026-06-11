@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ArrowUpRight, CalendarDays, Trophy, BarChart3, Activity, ListChecks, ChevronRight, Goal, Users } from "lucide-react";
+import { ArrowUpRight, CalendarDays, Trophy, BarChart3, Activity, ListChecks, ChevronRight, Goal, Users, Clock } from "lucide-react";
 import { getHomeData, getPredictionHub } from "@/lib/queries";
+import { Countdown } from "@/components/domain/countdown";
 import { getCurrentParticipantId } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -76,6 +77,17 @@ export default async function HomePage() {
             </Button>
           </CardContent>
         </Card>
+      )}
+
+      {/* Next prediction lock — live countdown */}
+      {d.ribbon[0] && (
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border bg-card px-4 py-2.5 text-sm">
+          <Clock className="h-4 w-4 shrink-0 text-gold" />
+          <span className="text-muted-foreground">Next lock:</span>
+          <span className="font-medium">{d.ribbon[0].home?.name} v {d.ribbon[0].away?.name}</span>
+          <span className="text-muted-foreground">in</span>
+          <span className="font-mono font-semibold text-foreground"><Countdown target={d.ribbon[0].kickoff.toISOString()} compact /></span>
+        </div>
       )}
 
       {/* Minimal upcoming-matches ribbon */}

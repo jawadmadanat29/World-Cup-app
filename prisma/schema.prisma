@@ -291,19 +291,13 @@ model ParticipantMatchPrediction {
   awayGoals       Int?
   predictedOutcome String? // HOME | AWAY | DRAW (derived from score, stored for convenience)
 
-  // Knockout-specific
+  // Knockout-specific: who goes through (extra time / penalties don't matter).
   advanceTeamId   String? // predicted team to advance (plain id)
-  predictExtraTime Boolean?
-  predictPenalties Boolean?
-  penaltyHome     Int?
-  penaltyAway     Int?
 
   // Match-specific bonus predictions (all optional / collapsible in the UI)
   firstTeamToScore String? // HOME | AWAY | NONE
   bttsPrediction   Boolean? // both teams to score
   cleanSheetPrediction Boolean?
-  totalGoalsRange  String? // range label, e.g. "2-3"
-  totalCardsRange  String? // range label
   wildcardPick     String? // free-text bold "wildcard" note
   confidence       String? // GUESSING | UNSURE | CONFIDENT | VERY_CONFIDENT — non-scoring, for fun/stats
 
@@ -322,7 +316,7 @@ model ParticipantMatchScorerPrediction {
   predictionId String
   prediction   ParticipantMatchPrediction @relation(fields: [predictionId], references: [id], onDelete: Cascade)
   playerId     String // plain id, resolved via player map
-  pickType     String // FIRST | ANYTIME | ASSIST
+  pickType     String // ANYTIME (the single any-time goalscorer pick)
 
   @@unique([predictionId, playerId, pickType])
 }
@@ -367,16 +361,8 @@ model ParticipantTournamentPrediction {
   participantId String      @unique
   participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
 
-  championTeamId       String?
-  runnerUpTeamId       String?
-  thirdTeamId          String?
-  fourthTeamId         String?
-  surpriseTeamId       String?
-  disappointingTeamId  String?
-  highestScoringTeamId String?
-  bestDefensiveTeamId  String?
-
-  finalPenaltyShootout Boolean?
+  championTeamId String?
+  runnerUpTeamId String?
 
   submittedAt DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -416,22 +402,13 @@ model ParticipantAwardPrediction {
 // Actual tournament-level results (group standings derive from match results)
 // ---------------------------------------------------------------------------
 
-/// Singleton row (id = "default") holding actual final standings & totals.
+/// Singleton row (id = "default") holding the actual champion & runner-up. The
+/// deeper-round sets (SF/QF/R16) are derived from real knockout match data.
 model TournamentResult {
-  id                   String   @id @default("default")
-  championTeamId       String?
-  runnerUpTeamId       String?
-  thirdTeamId          String?
-  fourthTeamId         String?
-  surpriseTeamId       String?
-  disappointingTeamId  String?
-  highestScoringTeamId String?
-  bestDefensiveTeamId  String?
-  totalGoals           Int?
-  finalWentToPens      Boolean?
-  redCards             Int?
-  hatTricks            Int?
-  updatedAt            DateTime @updatedAt
+  id             String   @id @default("default")
+  championTeamId String?
+  runnerUpTeamId String?
+  updatedAt      DateTime @updatedAt
 }
 
 model AwardResult {

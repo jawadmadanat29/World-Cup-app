@@ -6,8 +6,10 @@ import { PageHeader } from "@/components/domain/page-header";
 import { MatchPredictionForm } from "@/components/admin/match-prediction-form";
 import { saveMyMatchPrediction } from "@/actions/my-predictions";
 import { StatusBadge } from "@/components/domain/status-badge";
+import { Countdown } from "@/components/domain/countdown";
 import { STAGE_LABELS } from "@/lib/enums";
 import { formatKickoff } from "@/lib/format";
+import { Clock } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -30,9 +32,15 @@ export default async function MyMatchPage({ params }: { params: Promise<{ matchI
         title={`${match.home?.name ?? "TBD"} v ${match.away?.name ?? "TBD"}`}
         actions={<StatusBadge state={data.lockState} />}
       />
-      {locked && (
+      {locked ? (
         <div className="mb-4 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-muted-foreground">
           This match is locked — your prediction is final and now visible to everyone.
+        </div>
+      ) : (
+        <div className="mb-4 flex items-center gap-1.5 rounded-md border bg-card px-3 py-2 text-sm">
+          <Clock className="h-4 w-4 shrink-0 text-gold" />
+          <span className="text-muted-foreground">Locks at kickoff — in</span>
+          <span className="font-mono font-semibold"><Countdown target={match.kickoff.toISOString()} compact /></span>
         </div>
       )}
       <MatchPredictionForm

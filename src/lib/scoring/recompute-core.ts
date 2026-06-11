@@ -19,7 +19,6 @@ import {
   type MatchPredictionInput,
 } from "./engine";
 import { computeGroupStandings, rankBestThirds } from "./standings";
-import { computeLeaderTallies, highestScoringTeam, bestDefensiveTeam } from "./leaders";
 import { buildDedupeKey } from "./dedupe";
 
 interface TxnRow {
@@ -63,10 +62,7 @@ async function getRuleMap(db: PrismaClient) {
 
 function deriveActual(
   match: { homeTeamId: string | null },
-  result: {
-    ftHome: number; ftAway: number; wentToExtraTime: boolean; wentToPenalties: boolean;
-    pensHome: number | null; pensAway: number | null; advancingTeamId: string | null;
-  },
+  result: { ftHome: number; ftAway: number; advancingTeamId: string | null },
   events: { type: string; teamId: string | null; playerId: string | null; minute: number | null }[],
 ): ActualMatch {
   const byMinute = (a: { minute: number | null }, b: { minute: number | null }) =>
@@ -74,23 +70,11 @@ function deriveActual(
   const goalish = events.filter((e) => ["GOAL", "PENALTY_GOAL", "OWN_GOAL"].includes(e.type));
   const firstGoal = [...goalish].sort(byMinute)[0];
   const credited = events.filter((e) => e.type === "GOAL" || e.type === "PENALTY_GOAL");
-  const firstScorer = [...credited].sort(byMinute)[0];
-  // Players who scored 2+ credited goals this match.
-  const goalCounts = new Map<string, number>();
-  for (const e of credited) if (e.playerId) goalCounts.set(e.playerId, (goalCounts.get(e.playerId) ?? 0) + 1);
-  const multiScorerPlayerIds = [...goalCounts.entries()].filter(([, n]) => n >= 2).map(([pid]) => pid);
   return {
     ftHome: result.ftHome,
     ftAway: result.ftAway,
-    wentToExtraTime: result.wentToExtraTime,
-    wentToPenalties: result.wentToPenalties,
-    pensHome: result.pensHome,
-    pensAway: result.pensAway,
     advancingTeamId: result.advancingTeamId,
-    firstScorerPlayerId: firstScorer?.playerId ?? null,
     scorerPlayerIds: nonEmpty(credited.map((e) => e.playerId)),
-    multiScorerPlayerIds,
-    assistPlayerIds: nonEmpty(events.filter((e) => e.type === "ASSIST").map((e) => e.playerId)),
     firstTeamToScore: firstGoal ? (firstGoal.teamId === match.homeTeamId ? "HOME" : "AWAY") : "NONE",
   };
 }
@@ -118,17 +102,10 @@ export async function recomputeMatches(db: PrismaClient): Promise<number> {
         homeGoals: pred.homeGoals,
         awayGoals: pred.awayGoals,
         advanceTeamId: pred.advanceTeamId,
-        predictExtraTime: pred.predictExtraTime,
-        predictPenalties: pred.predictPenalties,
-        penaltyHome: pred.penaltyHome,
-        penaltyAway: pred.penaltyAway,
         firstTeamToScore: pred.firstTeamToScore,
         bttsPrediction: pred.bttsPrediction,
         cleanSheetPrediction: pred.cleanSheetPrediction,
-        firstScorerPlayerId: pred.scorerPicks.find((s) => s.pickType === "FIRST")?.playerId ?? null,
         anytimeScorerPlayerIds: pred.scorerPicks.filter((s) => s.pickType === "ANYTIME").map((s) => s.playerId),
-        assistPlayerIds: pred.scorerPicks.filter((s) => s.pickType === "ASSIST").map((s) => s.playerId),
-        multiScorerPlayerIds: pred.scorerPicks.filter((s) => s.pickType === "MULTI").map((s) => s.playerId),
         wildcardApplied: wildcardSet.has(pred.participantId),
         isKnockout,
       };
@@ -227,28 +204,13 @@ export async function recomputeTournamentAndAwards(db: PrismaClient): Promise<nu
     if (m.homeTeamId) target.add(m.homeTeamId);
     if (m.awayTeamId) target.add(m.awayTeamId);
   }
-  // Auto-derive team stats from entered results/events; admin values (if set on
-  // TournamentResult) always take precedence.
-  const playedMatches = await db.match.findMany({ where: { result: { isNot: null } }, include: { result: true } });
-  const eventRows = await db.matchEvent.findMany({ select: { type: true, playerId: true, matchId: true, teamId: true } });
-  const tallies = computeLeaderTallies(
-    eventRows,
-    playedMatches.map((m) => ({ homeTeamId: m.homeTeamId, awayTeamId: m.awayTeamId, ftHome: m.result!.ftHome, ftAway: m.result!.ftAway })),
-  );
 
   const actual = {
     championTeamId: tr?.championTeamId ?? null,
     runnerUpTeamId: tr?.runnerUpTeamId ?? null,
-    thirdTeamId: tr?.thirdTeamId ?? null,
-    fourthTeamId: tr?.fourthTeamId ?? null,
     semifinalistTeamIds: [...sfTeams],
     quarterfinalistTeamIds: [...qfTeams],
     roundOf16TeamIds: [...r16Teams],
-    surpriseTeamId: tr?.surpriseTeamId ?? null,
-    disappointingTeamId: tr?.disappointingTeamId ?? null,
-    highestScoringTeamId: tr?.highestScoringTeamId ?? highestScoringTeam(tallies),
-    bestDefensiveTeamId: tr?.bestDefensiveTeamId ?? bestDefensiveTeam(tallies),
-    finalWentToPens: tr?.finalWentToPens ?? null,
   };
 
   const rows: TxnRow[] = [];
@@ -261,16 +223,9 @@ export async function recomputeTournamentAndAwards(db: PrismaClient): Promise<nu
           {
             championTeamId: p.championTeamId,
             runnerUpTeamId: p.runnerUpTeamId,
-            thirdTeamId: p.thirdTeamId,
-            fourthTeamId: p.fourthTeamId,
             semifinalistTeamIds: p.teamPicks.filter((x) => x.category === "SEMIFINALIST").map((x) => x.teamId),
             quarterfinalistTeamIds: p.teamPicks.filter((x) => x.category === "QUARTERFINALIST").map((x) => x.teamId),
             roundOf16TeamIds: p.teamPicks.filter((x) => x.category === "ROUND_OF_16").map((x) => x.teamId),
-            surpriseTeamId: p.surpriseTeamId,
-            disappointingTeamId: p.disappointingTeamId,
-            highestScoringTeamId: p.highestScoringTeamId,
-            bestDefensiveTeamId: p.bestDefensiveTeamId,
-            finalPenaltyShootout: p.finalPenaltyShootout,
           },
           actual,
           rules,

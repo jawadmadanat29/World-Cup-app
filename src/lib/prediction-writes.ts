@@ -36,27 +36,21 @@ export async function writeMatchPrediction(input: MatchPredInput, actor: string)
     create: {
       participantId: d.participantId, matchId: d.matchId,
       homeGoals: d.homeGoals ?? null, awayGoals: d.awayGoals ?? null, predictedOutcome: outcome,
-      advanceTeamId: d.advanceTeamId ?? null, predictExtraTime: d.predictExtraTime ?? null, predictPenalties: d.predictPenalties ?? null,
-      penaltyHome: d.penaltyHome ?? null, penaltyAway: d.penaltyAway ?? null,
+      advanceTeamId: d.advanceTeamId ?? null,
       firstTeamToScore: d.firstTeamToScore || null, bttsPrediction: d.bttsPrediction ?? null, cleanSheetPrediction: d.cleanSheetPrediction ?? null,
-      totalGoalsRange: null, totalCardsRange: null, wildcardPick: d.wildcardPick ?? null, confidence: d.confidence || null,
+      wildcardPick: d.wildcardPick ?? null, confidence: d.confidence || null,
     },
     update: {
       homeGoals: d.homeGoals ?? null, awayGoals: d.awayGoals ?? null, predictedOutcome: outcome,
-      advanceTeamId: d.advanceTeamId ?? null, predictExtraTime: d.predictExtraTime ?? null, predictPenalties: d.predictPenalties ?? null,
-      penaltyHome: d.penaltyHome ?? null, penaltyAway: d.penaltyAway ?? null,
+      advanceTeamId: d.advanceTeamId ?? null,
       firstTeamToScore: d.firstTeamToScore || null, bttsPrediction: d.bttsPrediction ?? null, cleanSheetPrediction: d.cleanSheetPrediction ?? null,
-      totalGoalsRange: null, totalCardsRange: null, wildcardPick: d.wildcardPick ?? null, confidence: d.confidence || null,
+      wildcardPick: d.wildcardPick ?? null, confidence: d.confidence || null,
       updatedAt: new Date(),
     },
   });
 
   await prisma.participantMatchScorerPrediction.deleteMany({ where: { predictionId: pred.id } });
-  const picks: { predictionId: string; playerId: string; pickType: string }[] = [];
-  if (d.firstScorerPlayerId) picks.push({ predictionId: pred.id, playerId: d.firstScorerPlayerId, pickType: "FIRST" });
-  for (const pid of d.anytimeScorerPlayerIds ?? []) picks.push({ predictionId: pred.id, playerId: pid, pickType: "ANYTIME" });
-  for (const pid of d.assistPlayerIds ?? []) picks.push({ predictionId: pred.id, playerId: pid, pickType: "ASSIST" });
-  for (const pid of d.multiScorerPlayerIds ?? []) picks.push({ predictionId: pred.id, playerId: pid, pickType: "MULTI" });
+  const picks = (d.anytimeScorerPlayerIds ?? []).map((pid) => ({ predictionId: pred.id, playerId: pid, pickType: "ANYTIME" }));
   if (picks.length) await prisma.participantMatchScorerPrediction.createMany({ data: picks });
 
   const config = await getConfig();
@@ -101,14 +95,10 @@ export async function writeTournamentPrediction(input: TournamentPredInput, acto
     where: { participantId: d.participantId },
     create: {
       participantId: d.participantId,
-      championTeamId: clean(d.championTeamId), runnerUpTeamId: clean(d.runnerUpTeamId), thirdTeamId: clean(d.thirdTeamId), fourthTeamId: clean(d.fourthTeamId),
-      surpriseTeamId: clean(d.surpriseTeamId), disappointingTeamId: clean(d.disappointingTeamId), highestScoringTeamId: clean(d.highestScoringTeamId), bestDefensiveTeamId: clean(d.bestDefensiveTeamId),
-      finalPenaltyShootout: d.finalPenaltyShootout ?? null,
+      championTeamId: clean(d.championTeamId), runnerUpTeamId: clean(d.runnerUpTeamId),
     },
     update: {
-      championTeamId: clean(d.championTeamId), runnerUpTeamId: clean(d.runnerUpTeamId), thirdTeamId: clean(d.thirdTeamId), fourthTeamId: clean(d.fourthTeamId),
-      surpriseTeamId: clean(d.surpriseTeamId), disappointingTeamId: clean(d.disappointingTeamId), highestScoringTeamId: clean(d.highestScoringTeamId), bestDefensiveTeamId: clean(d.bestDefensiveTeamId),
-      finalPenaltyShootout: d.finalPenaltyShootout ?? null,
+      championTeamId: clean(d.championTeamId), runnerUpTeamId: clean(d.runnerUpTeamId),
     },
   });
 

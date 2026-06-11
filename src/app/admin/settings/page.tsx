@@ -17,8 +17,6 @@ export default async function AdminSettingsPage() {
       <PageHeader title="Settings & adjustments" description="League configuration, lock timing, wildcards and manual point corrections." eyebrow="Configuration" />
       <SettingsForm
         config={{
-          matchLockBufferMinutes: config.matchLockBufferMinutes,
-          closingSoonMinutes: config.closingSoonMinutes,
           wildcardsPerParticipant: config.wildcardsPerParticipant,
           tournamentName: config.tournamentName,
         }}

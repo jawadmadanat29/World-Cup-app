@@ -51,17 +51,11 @@ export const matchPredictionSchema = z.object({
   homeGoals: optInt,
   awayGoals: optInt,
   advanceTeamId: optStr,
-  predictExtraTime: optBool,
-  predictPenalties: optBool,
-  penaltyHome: optInt,
-  penaltyAway: optInt,
   firstTeamToScore: z.enum(tuple(FIRST_TO_SCORE)).optional().or(z.literal("")),
   bttsPrediction: optBool,
   cleanSheetPrediction: optBool,
-  firstScorerPlayerId: optStr,
-  anytimeScorerPlayerIds: z.array(z.string()).max(2, "Max 2 any-time scorers").default([]),
-  assistPlayerIds: z.array(z.string()).max(2, "Max 2 assist providers").default([]),
-  multiScorerPlayerIds: z.array(z.string()).max(1, "Pick one multi-goal scorer").default([]),
+  // Exactly one any-time goalscorer pick.
+  anytimeScorerPlayerIds: z.array(z.string()).max(1, "Pick one any-time goalscorer").default([]),
   wildcardPick: optStr,
   confidence: z.enum(tuple(CONFIDENCE_LEVELS)).optional().or(z.literal("")),
   applyWildcard: z.boolean().default(false),
@@ -80,17 +74,10 @@ export const tournamentPredictionSchema = z.object({
   participantId: z.string().min(1),
   championTeamId: optStr,
   runnerUpTeamId: optStr,
-  thirdTeamId: optStr,
-  fourthTeamId: optStr,
   semifinalistTeamIds: z.array(z.string()).max(4).default([]),
   quarterfinalistTeamIds: z.array(z.string()).max(8).default([]),
   roundOf16TeamIds: z.array(z.string()).max(16).default([]),
   bestThirdTeamIds: z.array(z.string()).max(8).default([]),
-  surpriseTeamId: optStr,
-  disappointingTeamId: optStr,
-  highestScoringTeamId: optStr,
-  bestDefensiveTeamId: optStr,
-  finalPenaltyShootout: optBool,
 });
 export type TournamentPredictionInputForm = z.infer<typeof tournamentPredictionSchema>;
 
@@ -140,8 +127,6 @@ export const scoringRuleUpdateSchema = z.object({
 });
 
 export const settingsSchema = z.object({
-  matchLockBufferMinutes: z.coerce.number().int().min(0).max(240),
-  closingSoonMinutes: z.coerce.number().int().min(0).max(1440),
   wildcardsPerParticipant: z.coerce.number().int().min(0).max(20),
   tournamentName: z.string().min(1).max(80),
 });

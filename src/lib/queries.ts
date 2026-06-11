@@ -1,5 +1,5 @@
 import "server-only";
-import { subDays, subMinutes } from "date-fns";
+import { subDays } from "date-fns";
 import { prisma } from "@/lib/db";
 import { getConfig } from "@/lib/settings";
 import { matchLockState, sectionLockState, isLocked } from "@/lib/locking";
@@ -435,10 +435,10 @@ export type PlayerLite = { id: string; name: string; position: string };
 
 export interface HubMatch {
   id: string; matchNumber: number; stage: string; groupCode: string | null; kickoff: Date;
-  lockAt: string; // ISO time this match locks (kickoff minus buffer) — for countdowns
+  lockAt: string; // ISO time this match locks (= exact kickoff) — for countdowns
   home: TeamLite; away: TeamLite;
-  lockState: LockState; // DISPLAY state (UPCOMING for future matchdays)
-  realLockState: LockState; // time-based per-match state
+  lockState: LockState; // per-match time-based state (OPEN / UPCOMING / LOCKED / COMPLETED)
+  realLockState: LockState; // same as lockState (kept for callers)
   editable: boolean;
   predicted: boolean;
   complete: boolean;
@@ -469,7 +469,7 @@ export async function getPredictionHub(participantId: string) {
         { kickoff: m.kickoff, manualLock: m.manualLock, hasResult: !!m.result, status: m.status, lockBufferMinutes: m.lockBufferMinutes },
         config.matchLockBufferMinutes, config.closingSoonMinutes, now,
       );
-      const lockAt = subMinutes(m.kickoff, m.lockBufferMinutes ?? config.matchLockBufferMinutes).toISOString();
+      const lockAt = m.kickoff.toISOString(); // matches lock at the exact kickoff
       return {
         id: m.id, matchNumber: m.matchNumber, stage: m.stage, groupCode: m.group?.code ?? null, kickoff: m.kickoff, lockAt,
         home: teamMap.get(m.homeTeamId!)!, away: teamMap.get(m.awayTeamId!)!,
@@ -480,23 +480,23 @@ export async function getPredictionHub(participantId: string) {
       };
     });
 
-  // Progressive unlock: group into matchdays, find the current (earliest not
-  // fully locked) day; everything after it is UPCOMING and not editable.
+  // Group into matchdays purely for display. Every match stays editable until
+  // its OWN kickoff — the matchday "status" is informational and never gates
+  // prediction access (a match >24h away is still fully open).
   const days = groupMatchdays(base, (m) => m.kickoff);
   const currentKey = currentMatchdayKey(days, (m) => isLocked(m.realLockState));
   const currentIndex = days.findIndex((d) => d.key === currentKey);
 
   const matchdays = days.map((d, idx) => {
     const status = currentIndex < 0 ? "done" : idx < currentIndex ? "done" : idx === currentIndex ? "current" : "upcoming";
-    const upcoming = status === "upcoming";
     return {
       key: d.key,
       label: d.label,
       status: status as "done" | "current" | "upcoming",
       matches: d.items.map((m): HubMatch => ({
         ...m,
-        lockState: upcoming ? "UPCOMING" : m.realLockState,
-        editable: !upcoming && (m.realLockState === "OPEN" || m.realLockState === "CLOSING_SOON"),
+        lockState: m.realLockState,
+        editable: m.realLockState === "OPEN" || m.realLockState === "UPCOMING",
       })),
     };
   });
@@ -559,13 +559,9 @@ export async function getMatchPrediction(participantId: string, matchId: string)
     existing: existing
       ? {
           homeGoals: existing.homeGoals, awayGoals: existing.awayGoals, advanceTeamId: existing.advanceTeamId,
-          predictExtraTime: existing.predictExtraTime, predictPenalties: existing.predictPenalties,
-          penaltyHome: existing.penaltyHome, penaltyAway: existing.penaltyAway,
           firstTeamToScore: existing.firstTeamToScore, bttsPrediction: existing.bttsPrediction, cleanSheetPrediction: existing.cleanSheetPrediction,
           wildcardPick: existing.wildcardPick, confidence: existing.confidence,
           anytimeScorerPlayerIds: existing.scorerPicks.filter((s) => s.pickType === "ANYTIME").map((s) => s.playerId),
-          assistPlayerIds: existing.scorerPicks.filter((s) => s.pickType === "ASSIST").map((s) => s.playerId),
-          multiScorerPlayerIds: existing.scorerPicks.filter((s) => s.pickType === "MULTI").map((s) => s.playerId),
         }
       : null,
     wildcardApplied: m.wildcards.length > 0,
@@ -854,7 +850,6 @@ export async function getOutcomesData() {
   const players = playerRows.map((p) => ({ id: p.id, name: p.name, team: teamMap.get(p.teamId)?.shortName ?? "" }));
   const awards: Record<string, string> = {};
   for (const a of awardResults) if (a.playerId) awards[a.awardType] = a.playerId;
-  const teamName = (id: string | null) => (id ? teamMap.get(id)?.name ?? null : null);
 
   return {
     teams,
@@ -862,22 +857,13 @@ export async function getOutcomesData() {
     current: {
       championTeamId: tr?.championTeamId ?? "",
       runnerUpTeamId: tr?.runnerUpTeamId ?? "",
-      thirdTeamId: tr?.thirdTeamId ?? "",
-      fourthTeamId: tr?.fourthTeamId ?? "",
-      surpriseTeamId: tr?.surpriseTeamId ?? "",
-      disappointingTeamId: tr?.disappointingTeamId ?? "",
-      highestScoringTeamId: tr?.highestScoringTeamId ?? "",
-      bestDefensiveTeamId: tr?.bestDefensiveTeamId ?? "",
-      totalGoals: tr?.totalGoals != null ? String(tr.totalGoals) : "",
-      finalWentToPens: tr?.finalWentToPens ?? false,
-      redCards: tr?.redCards != null ? String(tr.redCards) : "",
-      hatTricks: tr?.hatTricks != null ? String(tr.hatTricks) : "",
       awards,
     },
     suggestions: {
-      ...leaders.suggestions,
-      highestScoringTeamName: teamName(leaders.suggestions.highestScoringTeamId),
-      bestDefensiveTeamName: teamName(leaders.suggestions.bestDefensiveTeamId),
+      goldenBootPlayerId: leaders.suggestions.goldenBootPlayerId,
+      goldenBootLabel: leaders.suggestions.goldenBootLabel,
+      topAssistPlayerId: leaders.suggestions.topAssistPlayerId,
+      topAssistLabel: leaders.suggestions.topAssistLabel,
     },
   };
 }

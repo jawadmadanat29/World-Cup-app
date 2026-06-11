@@ -1,119 +1,141 @@
 import type { Metadata } from "next";
 import { prisma } from "@/lib/db";
+import { buildRuleMap, ruleValue } from "@/lib/scoring/rules";
 import { PageHeader } from "@/components/domain/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Trophy, Target, ListOrdered, Network, Sparkles, Medal, Scale } from "lucide-react";
+import { Target, ListOrdered, Network, Sparkles, Medal, Scale } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "How scoring works" };
 
-const CATEGORY_META: Record<string, { title: string; blurb: string; icon: React.ComponentType<{ className?: string }> }> = {
-  MATCH: { title: "Match predictions", blurb: "Per match. Get the result right, get more for the exact score. Exact score replaces the goal-difference and total-goals bonuses (no double-counting). Knockout extras score the advancing team, extra time and penalties.", icon: Target },
-  GROUP: { title: "Group stage", blurb: "Your predicted finishing order in each group, plus correctly tipping who advances and the best third-placed qualifiers.", icon: ListOrdered },
-  KNOCKOUT_PRE: { title: "Tournament bracket (one-time)", blurb: "Your one-time prediction of how far each team goes — Round of 16, quarter-finals, semis, the final, the champion and third place.", icon: Network },
-  TOURNAMENT: { title: "Tournament specials", blurb: "Surprise team, biggest disappointment, highest-scoring & best defensive teams, and the final penalty-shootout call.", icon: Trophy },
-  AWARD: { title: "Player awards", blurb: "Golden Boot, top assister, Player of the Tournament and the rest.", icon: Medal },
-  KNOCKOUT_STAGE: { title: "Stage-by-stage knockout", blurb: "Optional per-round winner picks once the bracket is set.", icon: Network },
-};
-
-const CATEGORY_ORDER = ["MATCH", "GROUP", "KNOCKOUT_PRE", "TOURNAMENT", "AWARD", "KNOCKOUT_STAGE"];
-
 export default async function ScoringPage() {
-  const rules = await prisma.scoringRule.findMany({ orderBy: [{ category: "asc" }, { value: "desc" }] });
-  const byCat = new Map<string, typeof rules>();
-  for (const r of rules) {
-    if (r.category === "SYSTEM") continue;
-    (byCat.get(r.category) ?? byCat.set(r.category, []).get(r.category)!).push(r);
-  }
-  const cats = CATEGORY_ORDER.filter((c) => byCat.has(c));
+  const rules = buildRuleMap(await prisma.scoringRule.findMany());
+  const v = (key: string) => ruleValue(rules, key);
 
-  const val = (key: string) => rules.find((r) => r.key === key)?.value ?? 0;
-  const SUMMARY = [
-    { label: "Right result", points: val("MATCH_OUTCOME") },
-    { label: "Exact score", points: val("MATCH_OUTCOME") + val("MATCH_EXACT") },
-    { label: "Group winner", points: val("GROUP_WINNER") },
-    { label: "Reach a round", points: `${val("KO_PRE_R16")}–${val("KO_PRE_FINAL")}` },
-    { label: "Champion", points: val("KO_PRE_CHAMPION") },
-    { label: "Golden Boot", points: val("AWARD_GOLDEN_BOOT") },
+  const summary = [
+    { label: "Correct result", points: `+${v("MATCH_OUTCOME")}` },
+    { label: "Exact score", points: `+${v("MATCH_EXACT")}` },
+    { label: "Group winner", points: `+${v("GROUP_WINNER")}` },
+    { label: "Reach a round", points: `+${v("GROUP_ADVANCE")}–${v("KO_PRE_FINAL")}` },
+    { label: "Champion", points: `+${v("KO_PRE_CHAMPION")}` },
+    { label: "Golden Boot", points: `+${v("AWARD_GOLDEN_BOOT")}` },
+    { label: "Top Assister", points: `+${v("AWARD_TOP_ASSIST")}` },
   ];
+
+  const Row = ({ label, points, note }: { label: string; points: number | string; note?: string }) => (
+    <div className="flex items-center justify-between gap-3 py-2 text-sm">
+      <span>
+        {label}
+        {note && <span className="ml-1 text-xs text-muted-foreground">· {note}</span>}
+      </span>
+      <span className="font-mono font-semibold tabular-nums">{typeof points === "number" ? `+${points}` : points}</span>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="How scoring works"
-        description="Every prediction earns points. These are the current values — they can be fine-tuned, and any change instantly recalculates the leaderboard."
+        description="Simple by design. Make the predictions football fans love making — the points follow."
         eyebrow="Points guide"
       />
 
-      {/* 30-second summary (Phase 3.4) — the gist for a new player. */}
+      {/* 30-second version */}
       <Card className="border-primary/30 bg-primary/5">
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base"><Sparkles className="h-4 w-4 text-primary" /> The 30-second version</CardTitle>
-          <p className="text-xs text-muted-foreground">Right result <b className="text-foreground">+{val("MATCH_OUTCOME")}</b>, exact score <b className="text-foreground">+{val("MATCH_OUTCOME") + val("MATCH_EXACT")}</b>, nail your group finishes and how far teams go, pick the champion <b className="text-foreground">+{val("KO_PRE_CHAMPION")}</b> and the Golden Boot — plus a pile of fun bonuses. Full detail below.</p>
         </CardHeader>
         <CardContent className="pt-1">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {SUMMARY.map((s) => (
+            {summary.map((s) => (
               <div key={s.label} className="flex items-center justify-between gap-2 rounded-md border bg-background px-3 py-2 text-sm">
                 <span className="text-muted-foreground">{s.label}</span>
-                <span className="font-mono font-semibold tabular-nums">+{s.points}</span>
+                <span className="font-mono font-semibold tabular-nums">{s.points}</span>
               </div>
             ))}
           </div>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Target className="h-4 w-4 text-primary" /> The basics (a match)</CardTitle></CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <p>Predict the score of each match. You earn:</p>
-          <ul className="ml-4 list-disc space-y-1">
-            <li><b className="text-foreground">Correct result</b> (win/draw/loss) — the base points.</li>
-            <li><b className="text-foreground">Exact score</b> — a bigger bonus on top. This <i>replaces</i> the goal-difference and total-goals bonuses, so you’re never double-counted.</li>
-            <li><b className="text-foreground">Close calls</b> — right goal difference, or right total goals, each earn a small bonus when the score isn’t exact.</li>
-            <li>Optional extras: first scorer, any-time scorers, assists, both-teams-to-score, clean sheet, and a multi-goal scorer.</li>
-          </ul>
-        </CardContent>
-      </Card>
-
       <div className="grid gap-4 lg:grid-cols-2">
-        {cats.map((cat) => {
-          const meta = CATEGORY_META[cat];
-          const Icon = meta?.icon ?? Trophy;
-          return (
-            <Card key={cat}>
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-base"><Icon className="h-4 w-4 text-primary" /> {meta?.title ?? cat}</CardTitle>
-                {meta?.blurb && <p className="text-xs text-muted-foreground">{meta.blurb}</p>}
-              </CardHeader>
-              <CardContent className="divide-y pt-0">
-                {byCat.get(cat)!.map((r) => (
-                  <div key={r.key} className="flex items-center justify-between gap-3 py-2 text-sm">
-                    <span className={r.enabled ? "" : "text-muted-foreground line-through"}>{r.label}</span>
-                    <span className="flex items-center gap-2">
-                      {!r.enabled && <Badge variant="muted">off</Badge>}
-                      <span className="font-mono font-semibold tabular-nums">{r.value > 0 ? `+${r.value}` : r.value}</span>
-                    </span>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          );
-        })}
+        {/* Match predictions */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base"><Target className="h-4 w-4 text-primary" /> Every match</CardTitle>
+            <p className="text-xs text-muted-foreground">Predict the score. The exact-score bonus stacks on top of the correct result.</p>
+          </CardHeader>
+          <CardContent className="divide-y pt-0">
+            <Row label="Correct result (win / draw / loss)" points={v("MATCH_OUTCOME")} />
+            <Row label="Exact score" points={v("MATCH_EXACT")} note="bonus on top of the result" />
+            <Row label="First team to score" points={v("BONUS_FIRST_TO_SCORE")} />
+            <Row label="Both teams to score" points={v("BONUS_BTTS")} />
+            <Row label="Clean sheet" points={v("BONUS_CLEAN_SHEET")} />
+            <Row label="Any-time goalscorer" points={v("BONUS_ANYTIME_SCORER")} note="pick one player" />
+            <Row label="Knockout: correct team to advance" points={v("KO_ADVANCE")} note="extra time / penalties don't matter" />
+          </CardContent>
+        </Card>
+
+        {/* Group stage */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base"><ListOrdered className="h-4 w-4 text-primary" /> Group stage</CardTitle>
+            <p className="text-xs text-muted-foreground">Your predicted finishing order in each group.</p>
+          </CardHeader>
+          <CardContent className="divide-y pt-0">
+            <Row label="Correct group winner" points={v("GROUP_WINNER")} />
+            <Row label="Correct runner-up" points={v("GROUP_RUNNER_UP")} />
+            <Row label="Correct third place" points={v("GROUP_THIRD")} />
+            <Row label="Correct fourth place" points={v("GROUP_FOURTH")} />
+            <Row label="Entire group correct" points={v("GROUP_EXACT_BONUS")} note="bonus" />
+            <Row label="Each team you correctly send through" points={v("GROUP_ADVANCE")} />
+            <Row label="Each correct best third-placed qualifier" points={v("GROUP_BEST_THIRD")} />
+          </CardContent>
+        </Card>
+
+        {/* Tournament bracket */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base"><Network className="h-4 w-4 text-primary" /> Tournament bracket</CardTitle>
+            <p className="text-xs text-muted-foreground">Your one-time prediction of how far each team goes.</p>
+          </CardHeader>
+          <CardContent className="divide-y pt-0">
+            <Row label="Reach the Round of 32" points={v("GROUP_ADVANCE")} note="scored via your group + best-third picks" />
+            <Row label="Reach the Round of 16" points={v("KO_PRE_R16")} />
+            <Row label="Reach the Quarter-finals" points={v("KO_PRE_QF")} />
+            <Row label="Reach the Semi-finals" points={v("KO_PRE_SF")} />
+            <Row label="Reach the Final (finalist)" points={v("KO_PRE_FINAL")} />
+            <Row label="Champion" points={v("KO_PRE_CHAMPION")} />
+          </CardContent>
+        </Card>
+
+        {/* Player awards */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base"><Medal className="h-4 w-4 text-primary" /> Player awards</CardTitle>
+            <p className="text-xs text-muted-foreground">Two picks for the whole tournament.</p>
+          </CardHeader>
+          <CardContent className="divide-y pt-0">
+            <Row label="Golden Boot (top scorer)" points={v("AWARD_GOLDEN_BOOT")} />
+            <Row label="Top Assister" points={v("AWARD_TOP_ASSIST")} />
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Sparkles className="h-4 w-4 text-gold" /> Wildcards</CardTitle></CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            Each player gets a few wildcards for the whole tournament. Play one before a match locks to <b className="text-foreground">double your result points</b> (outcome + exact/goal-difference) for that game. Goalscorer, assist, card and award points are never doubled.
+            Each player gets {v("WILDCARDS_PER_PARTICIPANT")} wildcards for the whole tournament. Play one before a match
+            locks to <b className="text-foreground">double your result points</b> (correct result + exact score) for that
+            game. Bonus picks are never doubled.
           </CardContent>
         </Card>
         <Card>
           <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Scale className="h-4 w-4 text-primary" /> Ties on the leaderboard</CardTitle></CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            Level on points? We rank by, in order: most exact scores → most correct results → most correct knockout winners → most correct goalscorers → most correct award picks → earliest tournament prediction submitted → otherwise a shared position.
+            Level on points? We rank by, in order: most exact scores → most correct results → most correct knockout
+            winners → most correct goalscorers → most correct award picks → earliest tournament prediction submitted →
+            otherwise a shared position.
           </CardContent>
         </Card>
       </div>

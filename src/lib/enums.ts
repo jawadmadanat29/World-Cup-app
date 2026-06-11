@@ -47,7 +47,8 @@ export const KNOCKOUT_STAGES = [
 export const OUTCOMES = ["HOME", "AWAY", "DRAW"] as const;
 export type Outcome = (typeof OUTCOMES)[number];
 
-export const SCORER_PICK_TYPES = ["FIRST", "ANYTIME", "ASSIST", "MULTI"] as const;
+// Only one kind of goalscorer pick remains: a single any-time goalscorer.
+export const SCORER_PICK_TYPES = ["ANYTIME"] as const;
 export type ScorerPickType = (typeof SCORER_PICK_TYPES)[number];
 
 export const FIRST_TO_SCORE = ["HOME", "AWAY", "NONE"] as const;
@@ -94,22 +95,12 @@ export type DecisiveScore = (typeof DECISIVE_SCORE)[number];
 export const AWARD_TYPES = [
   "GOLDEN_BOOT",
   "TOP_ASSIST",
-  "MVP",
-  "BEST_YOUNG",
-  "BEST_GK",
-  "FIRST_HATTRICK",
-  "MOST_GOALS_MATCH",
 ] as const;
 export type AwardType = (typeof AWARD_TYPES)[number];
 
 export const AWARD_LABELS: Record<string, string> = {
   GOLDEN_BOOT: "Golden Boot (Top Scorer)",
   TOP_ASSIST: "Top Assister",
-  MVP: "Player of the Tournament",
-  BEST_YOUNG: "Best Young Player",
-  BEST_GK: "Best Goalkeeper",
-  FIRST_HATTRICK: "First Hat-trick Scorer",
-  MOST_GOALS_MATCH: "Most Goals in a Match (Player)",
 };
 
 export const TOURNAMENT_TEAM_CATEGORIES = [
@@ -124,14 +115,18 @@ export type TournamentTeamCategory = (typeof TOURNAMENT_TEAM_CATEGORIES)[number]
 export const KNOCKOUT_PRED_MODES = ["PRE_TOURNAMENT", "STAGE_BY_STAGE"] as const;
 export type KnockoutPredMode = (typeof KNOCKOUT_PRED_MODES)[number];
 
+// A match is editable until its exact kickoff. "Upcoming" is a display-only
+// urgency flag (kickoff within 24h) — it does NOT lock predictions.
 export const LOCK_STATES = [
-  "UPCOMING", // future matchday — not yet open for predictions (progressive unlock)
-  "OPEN",
-  "CLOSING_SOON",
-  "LOCKED",
-  "COMPLETED",
+  "OPEN", // kickoff in the future — predictions open & editable
+  "UPCOMING", // kickoff within the next 24h — still editable, shown with urgency
+  "LOCKED", // now >= kickoff — predictions closed
+  "COMPLETED", // final result is in
 ] as const;
 export type LockState = (typeof LOCK_STATES)[number];
+
+// Window before kickoff during which a still-open match is flagged "Upcoming".
+export const UPCOMING_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 // Settings keys.
 export const SETTINGS = {
