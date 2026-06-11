@@ -1379,7 +1379,7 @@ async function eventsByMatch(matchIds: string[], teamMap: Map<string, TeamLite>)
     byMatch.set(e.matchId, list);
   }
   for (const [k, list] of byMatch) {
-    byMatch.set(k, list.sort((a, b) => (a.minute ?? 0) - (b.minute ?? 0)).slice(-8));
+    byMatch.set(k, list.sort((a, b) => (a.minute ?? 0) - (b.minute ?? 0)));
   }
   return byMatch;
 }

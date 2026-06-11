@@ -97,7 +97,7 @@ function FeaturedRow({ m }: { m: FeaturedMatch }) {
       </Link>
 
       {recent.length > 0 && (
-        <ul className="divide-y border-t text-sm">
+        <ul className="max-h-64 divide-y overflow-y-auto border-t text-sm">
           {recent.map((e) => (
             <li key={e.id} className="flex items-center gap-2 px-4 py-1.5">
               <span className="w-9 shrink-0 text-xs tabular-nums text-muted-foreground">{e.minute != null ? `${e.minute}'` : ""}</span>
