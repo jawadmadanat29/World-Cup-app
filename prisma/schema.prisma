@@ -192,6 +192,11 @@ model Match {
   manualLock        String? // LOCKED | OPEN | null (admin override of time-based lock)
   lockBufferMinutes Int? // per-match override of the global buffer
 
+  // Live (in-play) snapshot — refreshed by the sync while status = LIVE, cleared otherwise.
+  liveHome   Int? // current home score (our orientation)
+  liveAway   Int? // current away score (our orientation)
+  liveMinute Int? // elapsed minutes from the API (status.elapsed)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -152,6 +152,21 @@ export async function runSync({ force = false }: { force?: boolean } = {}): Prom
       if (!isAdminResult) {
         const newStatus = fx.finished ? "COMPLETED" : fx.live ? "LIVE" : "SCHEDULED";
         if (newStatus !== m.status) data.status = newStatus;
+
+        // ---- Live (in-play) snapshot: score + minute, in our orientation ----
+        if (fx.live && mHomeTeamId && mAwayTeamId) {
+          const homeIsOurHome = homeId === mHomeTeamId;
+          const liveHome = homeIsOurHome ? fx.homeGoals : fx.awayGoals;
+          const liveAway = homeIsOurHome ? fx.awayGoals : fx.homeGoals;
+          if (liveHome !== m.liveHome) data.liveHome = liveHome;
+          if (liveAway !== m.liveAway) data.liveAway = liveAway;
+          if (fx.minute !== m.liveMinute) data.liveMinute = fx.minute;
+        } else if (m.liveHome != null || m.liveAway != null || m.liveMinute != null) {
+          // No longer live — clear the snapshot so stale scores never linger.
+          data.liveHome = null;
+          data.liveAway = null;
+          data.liveMinute = null;
+        }
       }
       if (Object.keys(data).length) matchUpdates.push({ id: m.id, data });
 

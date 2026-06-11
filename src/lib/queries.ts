@@ -1322,3 +1322,83 @@ export async function getComparison(viewerId: string, rivalId: string) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Live (in-play) matches — powers the home "LIVE NOW" card. Reads the snapshot
+// the sync writes onto Match while status = LIVE, plus recent goal/card events.
+// ---------------------------------------------------------------------------
+
+export interface LiveEvent {
+  id: string;
+  type: string; // GOAL | OWN_GOAL | PENALTY_GOAL | YELLOW | RED | ASSIST
+  minute: number | null;
+  team: string | null; // short name of the team involved
+  player: string | null;
+}
+
+export interface LiveMatch {
+  id: string;
+  stage: string;
+  groupCode: string | null;
+  home: TeamLite | null;
+  away: TeamLite | null;
+  homeScore: number;
+  awayScore: number;
+  minute: number | null;
+  events: LiveEvent[];
+}
+
+export async function getLiveMatches(): Promise<LiveMatch[]> {
+  try {
+    return await queryLiveMatches();
+  } catch {
+    // Degrade to "nothing live" if e.g. the live-snapshot columns aren't
+    // migrated yet — never take down the home page over a live card.
+    return [];
+  }
+}
+
+async function queryLiveMatches(): Promise<LiveMatch[]> {
+  const live = await prisma.match.findMany({
+    where: { status: "LIVE" },
+    select: {
+      id: true, stage: true, homeTeamId: true, awayTeamId: true,
+      liveHome: true, liveAway: true, liveMinute: true,
+      group: { select: { code: true } },
+    },
+    orderBy: { kickoff: "asc" },
+  });
+  if (live.length === 0) return [];
+
+  const teamMap = await getTeamMap();
+  const events = await prisma.matchEvent.findMany({
+    where: { matchId: { in: live.map((m) => m.id) } },
+    select: { id: true, matchId: true, type: true, minute: true, teamId: true, player: { select: { name: true } } },
+  });
+  const byMatch = new Map<string, LiveEvent[]>();
+  for (const e of events) {
+    const list = byMatch.get(e.matchId) ?? [];
+    list.push({
+      id: e.id,
+      type: e.type,
+      minute: e.minute,
+      team: e.teamId ? teamMap.get(e.teamId)?.shortName ?? null : null,
+      player: e.player?.name ?? null,
+    });
+    byMatch.set(e.matchId, list);
+  }
+
+  return live.map((m) => ({
+    id: m.id,
+    stage: m.stage,
+    groupCode: m.group?.code ?? null,
+    home: m.homeTeamId ? teamMap.get(m.homeTeamId) ?? null : null,
+    away: m.awayTeamId ? teamMap.get(m.awayTeamId) ?? null : null,
+    homeScore: m.liveHome ?? 0,
+    awayScore: m.liveAway ?? 0,
+    minute: m.liveMinute,
+    events: (byMatch.get(m.id) ?? [])
+      .sort((a, b) => (a.minute ?? 0) - (b.minute ?? 0))
+      .slice(-8),
+  }));
+}
+

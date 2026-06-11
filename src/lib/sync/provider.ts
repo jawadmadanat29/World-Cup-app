@@ -18,6 +18,8 @@ export interface NormalizedFixture {
   kickoff: Date | null;
   finished: boolean;
   live: boolean;
+  /** Elapsed minutes while live (API status.elapsed), else null. */
+  minute: number | null;
   homeGoals: number | null;
   awayGoals: number | null;
   aetHome: number | null;
@@ -142,7 +144,7 @@ function apiFootball(): FootballProvider {
 
     async fetchFixtures() {
       const { json, quota } = await apiGet<{
-        fixture?: { id?: number; date?: string; status?: { short?: string } };
+        fixture?: { id?: number; date?: string; status?: { short?: string; elapsed?: number | null } };
         league?: { round?: string };
         teams?: { home?: { id?: number; name?: string }; away?: { id?: number; name?: string } };
         goals?: { home?: number | null; away?: number | null };
@@ -166,6 +168,7 @@ function apiFootball(): FootballProvider {
           kickoff: r.fixture?.date ? new Date(r.fixture.date) : null,
           finished: FINISHED.has(short),
           live: LIVE.has(short),
+          minute: r.fixture?.status?.elapsed ?? null,
           homeGoals: r.goals?.home ?? null,
           awayGoals: r.goals?.away ?? null,
           aetHome: r.score?.extratime?.home ?? null,
