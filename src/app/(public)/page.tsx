@@ -11,8 +11,8 @@ import { TeamLabel } from "@/components/domain/team-label";
 import { ParticipantBadge, ParticipantAvatar, FavoriteFlag } from "@/components/domain/participant-avatar";
 import { Movement } from "@/components/domain/movement";
 import { EmptyState } from "@/components/domain/empty-state";
+import { KickoffTime } from "@/components/domain/kickoff-time";
 import { timeUntil } from "@/lib/format";
-import { timeLabel, TOURNAMENT_TZ_LABEL } from "@/lib/matchday";
 
 export const dynamic = "force-dynamic";
 
@@ -104,7 +104,7 @@ export default async function HomePage() {
               <span className="text-xs text-muted-foreground">v</span>
               <TeamLabel name={f.away?.name} iso={f.away?.isoCode} showShort flagSize="sm" reverse />
               <span className="ml-1 whitespace-nowrap text-xs tabular-nums text-muted-foreground">
-                {timeLabel(f.kickoff)} {TOURNAMENT_TZ_LABEL}
+                <KickoffTime iso={f.kickoff} />
               </span>
             </Link>
           ))}
@@ -134,7 +134,7 @@ export default async function HomePage() {
                         <span className="text-xs text-muted-foreground">v</span>
                         <TeamLabel name={m.away?.name} iso={m.away?.isoCode} showShort flagSize="sm" reverse className="justify-end" />
                       </div>
-                      <span className="w-12 shrink-0 text-right text-xs tabular-nums text-muted-foreground">{timeLabel(m.kickoff)}</span>
+                      <span className="w-12 shrink-0 text-right text-xs tabular-nums text-muted-foreground"><KickoffTime iso={m.kickoff} showZone={false} /></span>
                     </li>
                   ))}
                 </ul>

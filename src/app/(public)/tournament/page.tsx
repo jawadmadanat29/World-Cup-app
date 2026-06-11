@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/domain/page-header";
 import { GroupTable } from "@/components/domain/group-table";
 import { TournamentMatches, type MatchdayGroup } from "@/components/domain/tournament-matches";
 import { KnockoutRound } from "@/components/domain/knockout-round";
-import { groupMatchdays, currentMatchdayKey, TOURNAMENT_TZ_LABEL } from "@/lib/matchday";
+import { groupMatchdays, currentMatchdayKey } from "@/lib/matchday";
 import { isLocked } from "@/lib/locking";
 import { cn } from "@/lib/utils";
 
@@ -34,7 +34,7 @@ export default async function TournamentPage({ searchParams }: { searchParams: P
       <PageHeader
         eyebrow="Browse the competition"
         title="Tournament"
-        description={`All 104 matches, group tables and the knockout bracket. Kickoff times shown in ${TOURNAMENT_TZ_LABEL}.`}
+        description="All 104 matches, group tables and the knockout bracket. Kickoff times follow the timezone you pick in the top bar."
       />
 
       <div className="no-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1">

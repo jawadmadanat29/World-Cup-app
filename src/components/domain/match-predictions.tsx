@@ -8,8 +8,9 @@ import { Input } from "@/components/ui/input";
 import { TeamLabel } from "@/components/domain/team-label";
 import { StatusBadge } from "@/components/domain/status-badge";
 import { Countdown } from "@/components/domain/countdown";
+import { KickoffTime } from "@/components/domain/kickoff-time";
 import { STAGE_SHORT } from "@/lib/enums";
-import { dayKey, timeLabel, TOURNAMENT_TZ_LABEL } from "@/lib/matchday";
+import { dayKey } from "@/lib/matchday";
 import type { HubMatch } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
@@ -164,8 +165,8 @@ function MatchRow({ m }: { m: HubMatch }) {
         <Badge variant="secondary" className="hidden shrink-0 sm:inline-flex">
           {m.stage === "GROUP" && m.groupCode ? m.groupCode : STAGE_SHORT[m.stage as keyof typeof STAGE_SHORT]}
         </Badge>
-        <span className="w-10 shrink-0 text-xs tabular-nums text-muted-foreground sm:w-16">
-          {timeLabel(m.kickoff)}<span className="hidden sm:inline"> {TOURNAMENT_TZ_LABEL}</span>
+        <span className="w-10 shrink-0 text-xs tabular-nums text-muted-foreground sm:w-auto">
+          <KickoffTime iso={m.kickoff} zoneClassName="hidden sm:inline" />
         </span>
         <div className="grid min-w-0 flex-1 grid-cols-[1fr_auto_1fr] items-center gap-2">
           <TeamLabel name={m.home.name} shortName={m.home.shortName} iso={m.home.isoCode} showShort flagSize="sm" className="justify-start" />

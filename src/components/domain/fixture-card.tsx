@@ -5,7 +5,8 @@ import { TeamLabel } from "@/components/domain/team-label";
 import { ScorePill } from "@/components/domain/score-pill";
 import { StatusBadge } from "@/components/domain/status-badge";
 import { STAGE_SHORT, STAGE_LABELS } from "@/lib/enums";
-import { formatKickoff, decisiveLabel } from "@/lib/format";
+import { KickoffTime } from "@/components/domain/kickoff-time";
+import { decisiveLabel } from "@/lib/format";
 import { format } from "date-fns";
 import type { FixtureRow } from "@/lib/queries";
 import { cn } from "@/lib/utils";
@@ -47,7 +48,7 @@ export function FixtureCard({ f, className }: { f: FixtureRow; className?: strin
 
         <div className="mt-3 flex items-center justify-between gap-2 text-xs text-muted-foreground">
           <span>
-            #{f.matchNumber} · {formatKickoff(f.kickoff)}
+            #{f.matchNumber} · <KickoffTime iso={f.kickoff} mode="full" />
           </span>
           {f.venue && <span className="truncate">{f.venue.city}</span>}
         </div>

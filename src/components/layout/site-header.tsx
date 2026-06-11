@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { Shield, LogOut, Menu, User, BookOpen, ScrollText } from "lucide-react";
 import { Logo } from "@/components/layout/logo";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { TimeZoneSwitcher } from "@/components/layout/timezone-switcher";
 import { ParticipantAvatar } from "@/components/domain/participant-avatar";
 import { PUBLIC_NAV, SECONDARY_NAV } from "@/lib/nav";
 import { logoutUser } from "@/actions/participant-auth";
@@ -63,6 +64,7 @@ export function SiteHeader({
         </nav>
 
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          <TimeZoneSwitcher />
           <ThemeToggle />
 
           {participant ? (

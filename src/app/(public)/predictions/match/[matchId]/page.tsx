@@ -8,7 +8,7 @@ import { saveMyMatchPrediction } from "@/actions/my-predictions";
 import { StatusBadge } from "@/components/domain/status-badge";
 import { Countdown } from "@/components/domain/countdown";
 import { STAGE_LABELS } from "@/lib/enums";
-import { formatKickoff } from "@/lib/format";
+import { KickoffTime } from "@/components/domain/kickoff-time";
 import { Clock } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +28,7 @@ export default async function MyMatchPage({ params }: { params: Promise<{ matchI
       <Link href="/predictions?mode=match" className="text-sm text-muted-foreground hover:text-foreground">← Back to my matches</Link>
       <PageHeader
         className="mt-3"
-        eyebrow={`${stageLabel} · #${match.matchNumber} · ${formatKickoff(match.kickoff)}`}
+        eyebrow={<>{stageLabel} · #{match.matchNumber} · <KickoffTime iso={match.kickoff} mode="full" /></>}
         title={`${match.home?.name ?? "TBD"} v ${match.away?.name ?? "TBD"}`}
         actions={<StatusBadge state={data.lockState} />}
       />

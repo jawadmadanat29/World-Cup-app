@@ -12,7 +12,8 @@ import { StatusBadge } from "@/components/domain/status-badge";
 import { ParticipantAvatar } from "@/components/domain/participant-avatar";
 import { EmptyState } from "@/components/domain/empty-state";
 import { STAGE_LABELS } from "@/lib/enums";
-import { formatKickoff, decisiveLabel } from "@/lib/format";
+import { KickoffTime } from "@/components/domain/kickoff-time";
+import { decisiveLabel } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +45,7 @@ export default async function MatchPage({ params }: { params: Promise<{ matchId:
               {completed ? (
                 <ScorePill home={m.result!.ftHome} away={m.result!.ftAway} className="text-lg" />
               ) : (
-                <span className="font-mono text-sm text-muted-foreground">{formatKickoff(m.kickoff)}</span>
+                <span className="font-mono text-sm text-muted-foreground"><KickoffTime iso={m.kickoff} mode="full" /></span>
               )}
               {completed && (
                 <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
@@ -61,7 +62,7 @@ export default async function MatchPage({ params }: { params: Promise<{ matchId:
           </div>
 
           <div className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-            <span>{formatKickoff(m.kickoff)}</span>
+            <span><KickoffTime iso={m.kickoff} mode="full" /></span>
             {m.venue && (
               <span className="inline-flex items-center gap-1">
                 <MapPin className="h-3.5 w-3.5" /> {m.venue.name}, {m.venue.city}

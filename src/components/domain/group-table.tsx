@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { TeamLabel } from "@/components/domain/team-label";
 import { ScorePill } from "@/components/domain/score-pill";
-import { formatKickoffShort } from "@/lib/format";
+import { KickoffTime } from "@/components/domain/kickoff-time";
 import { cn } from "@/lib/utils";
 import type { GroupData } from "@/lib/queries";
 
@@ -71,7 +71,7 @@ export function GroupTable({ group }: { group: GroupData }) {
                   <div key={f.id} className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-xs">
                     <TeamLabel name={f.home?.name} iso={f.home?.isoCode} showShort flagSize="sm" className="justify-start" />
                     {f.result ? <ScorePill home={f.result.ftHome} away={f.result.ftAway} muted /> : (
-                      <span className="text-center text-muted-foreground">{formatKickoffShort(f.kickoff)}</span>
+                      <span className="text-center text-muted-foreground"><KickoffTime iso={f.kickoff} mode="short" showZone={false} /></span>
                     )}
                     <TeamLabel name={f.away?.name} iso={f.away?.isoCode} showShort flagSize="sm" reverse className="justify-end" />
                   </div>

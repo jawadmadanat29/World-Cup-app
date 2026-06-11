@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
 import "./globals.css";
 import "flag-icons/css/flag-icons.min.css";
 import { Providers } from "./providers";
+import { DEFAULT_TZ } from "@/components/providers/timezone-provider";
 
 export const metadata: Metadata = {
   title: {
@@ -17,11 +19,16 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const cookieStore = await cookies();
+  const initialChoice = cookieStore.get("tzChoice")?.value || "local";
+  const initialTz = cookieStore.get("tz")?.value || DEFAULT_TZ;
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen bg-background text-foreground antialiased">
-        <Providers>{children}</Providers>
+        <Providers initialTz={initialTz} initialChoice={initialChoice}>
+          {children}
+        </Providers>
       </body>
     </html>
   );
