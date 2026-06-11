@@ -2,7 +2,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Check, ChevronLeft, ChevronRight, AlertTriangle, Trophy, Shuffle } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, AlertTriangle, Shuffle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -28,8 +28,7 @@ type Existing = {
   topAssistPlayerId: string | null;
 };
 
-const STEPS = ["Group finishes", "Best thirds", "Round of 32", "Round of 16", "Quarter-finals", "Semi-finals", "Final", "Top players", "Review"] as const;
-const STEP_STAGE: Record<number, string> = { 2: "R32", 3: "R16", 4: "QF", 5: "SF", 6: "FINAL" };
+const STEPS = ["Group finishes", "Best thirds", "Bracket", "Top players", "Review"] as const;
 
 /** In-place Fisher–Yates shuffle on a copy. */
 function shuffled<T>(arr: T[]): T[] {
@@ -241,18 +240,10 @@ export function TournamentBuilder({
               else toast.error("Pick exactly 8 best thirds.");
             }} />
         )}
-        {step >= 2 && step <= 6 && (
-          <BracketRound
-            stage={STEP_STAGE[step]}
-            knockout={knockout}
-            ctx={ctx}
-            winners={winners}
-            teamMap={teamMap}
-            onPick={pick}
-            isFinal={step === 6}
-          />
+        {step === 2 && (
+          <InteractiveBracket knockout={knockout} ctx={ctx} winners={winners} teamMap={teamMap} onPick={pick} />
         )}
-        {step === 7 && (
+        {step === 3 && (
           <Card>
             <CardHeader><CardTitle className="text-base">Top players</CardTitle></CardHeader>
             <CardContent className="space-y-4">
@@ -261,7 +252,7 @@ export function TournamentBuilder({
             </CardContent>
           </Card>
         )}
-        {step === 8 && (
+        {step === 4 && (
           <Card>
             <CardHeader><CardTitle className="text-base">Review &amp; submit</CardTitle></CardHeader>
             <CardContent className="space-y-3">
@@ -381,71 +372,78 @@ function BestThirdsStep({ pool, selected, onToggle }: { pool: TeamLite[]; select
   );
 }
 
-function BracketRound({ stage, knockout, ctx, winners, teamMap, onPick, isFinal }: {
-  stage: string; knockout: KoTie[]; ctx: Ctx; winners: Record<number, string>; teamMap: Map<string, TeamLite>; onPick: (mn: number, teamId: string) => void; isFinal: boolean;
+// Interactive horizontal bracket: rounds as columns (R32 → Final), each tie a
+// single card with two tappable sides. The picked team is highlighted and flows
+// into the next round automatically — mirrors the public /bracket view.
+function InteractiveBracket({ knockout, ctx, winners, teamMap, onPick }: {
+  knockout: KoTie[]; ctx: Ctx; winners: Record<number, string>; teamMap: Map<string, TeamLite>; onPick: (mn: number, teamId: string) => void;
 }) {
-  const ties = knockout.filter((t) => t.stage === stage).sort((a, b) => a.matchNumber - b.matchNumber);
-  const picked = ties.filter((t) => winnerOf(t.matchNumber, ctx, winners)).length;
+  const COLS: { stage: string; label: string }[] = [
+    { stage: "R32", label: "Round of 32" },
+    { stage: "R16", label: "Round of 16" },
+    { stage: "QF", label: "Quarter-finals" },
+    { stage: "SF", label: "Semi-finals" },
+    { stage: "FINAL", label: "Final" },
+  ];
 
-  function TeamRow({ mn, teamId, selected }: { mn: number; teamId: string | null; selected: boolean }) {
+  function Side({ mn, teamId, won, decided }: { mn: number; teamId: string | null; won: boolean; decided: boolean }) {
     const t = teamId ? teamMap.get(teamId) : null;
     return (
       <button
+        type="button"
         disabled={!teamId}
         onClick={() => teamId && onPick(mn, teamId)}
         className={cn(
-          "flex w-full items-center gap-2.5 rounded-md border px-3 py-2.5 text-left text-sm transition-all",
+          "flex w-full items-center gap-2 px-2.5 py-2 text-left text-xs transition-colors",
           !teamId
-            ? "cursor-not-allowed border-dashed bg-muted/20 text-muted-foreground"
-            : selected
-              ? "border-primary bg-primary/10 font-semibold text-foreground shadow-sm ring-1 ring-primary/30"
-              : "border-border bg-card hover:border-primary/50 hover:bg-secondary/50",
+            ? "cursor-not-allowed text-muted-foreground"
+            : won
+              ? "bg-primary/15 font-semibold text-foreground"
+              : decided
+                ? "text-muted-foreground hover:bg-secondary/60"
+                : "hover:bg-secondary/60",
         )}
       >
-        {t ? <Flag iso={t.isoCode} /> : <span className="h-3 w-4 rounded-[2px] bg-muted" />}
+        {t ? <Flag iso={t.isoCode} size="sm" /> : <span className="h-3 w-4 shrink-0 rounded-[2px] bg-muted" />}
         <span className="min-w-0 flex-1 truncate">{t ? t.name : "TBD"}</span>
-        {selected
-          ? <Check className="h-4 w-4 shrink-0 text-primary" />
-          : teamId && <span className="shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">pick</span>}
+        {won && <Check className="h-3.5 w-3.5 shrink-0 text-primary" />}
       </button>
     );
   }
 
+  function MatchCell({ t }: { t: KoTie }) {
+    const { home, away } = tieTeams(t.matchNumber, ctx, winners);
+    const w = winnerOf(t.matchNumber, ctx, winners);
+    const decided = !!w;
+    return (
+      <div className={cn("overflow-hidden rounded-lg border bg-card shadow-sm", decided ? "border-primary/40" : "border-border")}>
+        <Side mn={t.matchNumber} teamId={home} won={!!w && w === home} decided={decided} />
+        <div className="h-px bg-border" />
+        <Side mn={t.matchNumber} teamId={away} won={!!w && w === away} decided={decided} />
+      </div>
+    );
+  }
+
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center justify-between text-base">
-          <span className="flex items-center gap-2">{isFinal && <Trophy className="h-4 w-4 text-gold" />}{isFinal ? "Pick the champion" : "Pick each winner"}</span>
-          <span className={cn("text-xs font-medium", picked === ties.length ? "text-primary" : "text-muted-foreground")}>{picked}/{ties.length}</span>
-        </CardTitle>
-        <p className="text-xs text-muted-foreground">{isFinal ? "Your two finalists meet here — choose who lifts the trophy." : "Winners advance to the next round automatically."}</p>
-      </CardHeader>
-      <CardContent>
-        <div className={cn("grid gap-3 sm:gap-4", isFinal ? "max-w-sm" : "sm:grid-cols-2")}>
-          {ties.map((t, idx) => {
-            const { home, away } = tieTeams(t.matchNumber, ctx, winners);
-            const w = winnerOf(t.matchNumber, ctx, winners);
-            return (
-              <div key={t.matchNumber} className="space-y-1.5 rounded-xl border bg-secondary/30 p-2.5">
-                <div className="px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {isFinal ? "Final" : `Match ${idx + 1}`}
-                </div>
-                <TeamRow mn={t.matchNumber} teamId={home} selected={!!w && w === home} />
-                <div className="flex items-center gap-2 px-1">
-                  <span className="h-px flex-1 bg-border" />
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">vs</span>
-                  <span className="h-px flex-1 bg-border" />
-                </div>
-                <TeamRow mn={t.matchNumber} teamId={away} selected={!!w && w === away} />
+    <div className="space-y-2">
+      <p className="text-xs text-muted-foreground">Tap a team to send it through — winners flow into the next round automatically. Scroll sideways to follow your bracket to the final. 🏆</p>
+      <div className="no-scrollbar flex gap-3 overflow-x-auto pb-2">
+        {COLS.map(({ stage, label }) => {
+          const ties = knockout.filter((t) => t.stage === stage).sort((a, b) => a.matchNumber - b.matchNumber);
+          if (!ties.length) return null;
+          const picked = ties.filter((t) => winnerOf(t.matchNumber, ctx, winners)).length;
+          return (
+            <div key={stage} className="flex w-44 shrink-0 flex-col gap-2.5">
+              <div className="flex items-center justify-between rounded-md bg-secondary px-2.5 py-1 text-[11px] font-semibold">
+                <span>{label}</span>
+                <span className={cn("tabular-nums", picked === ties.length ? "text-primary" : "text-muted-foreground")}>{picked}/{ties.length}</span>
               </div>
-            );
-          })}
-        </div>
-        {tieTeams(ties[0]?.matchNumber ?? -1, ctx, winners).home === null && (
-          <p className="mt-3 text-center text-xs text-muted-foreground">Complete the previous round to reveal these matchups.</p>
-        )}
-      </CardContent>
-    </Card>
+              {ties.map((t) => <MatchCell key={t.matchNumber} t={t} />)}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
