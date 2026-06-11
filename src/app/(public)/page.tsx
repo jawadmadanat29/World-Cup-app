@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRight, CalendarDays, Trophy, BarChart3, Activity, ListChecks, ChevronRight, Goal, Users, Clock } from "lucide-react";
-import { getHomeData, getPredictionHub, getLiveMatches } from "@/lib/queries";
+import { getHomeData, getPredictionHub, getFeaturedMatches } from "@/lib/queries";
 import { LiveMatchCard } from "@/components/domain/live-match-card";
 import { Countdown } from "@/components/domain/countdown";
 import { getCurrentParticipantId } from "@/lib/auth";
@@ -20,10 +20,10 @@ export const dynamic = "force-dynamic";
 export default async function HomePage() {
   const participantId = await getCurrentParticipantId();
   const loggedIn = !!participantId;
-  const [d, hub, live] = await Promise.all([
+  const [d, hub, featured] = await Promise.all([
     getHomeData(),
     loggedIn ? getPredictionHub(participantId) : Promise.resolve(null),
-    getLiveMatches(),
+    getFeaturedMatches(),
   ]);
   const startHref = loggedIn ? "/predictions" : "/signup";
   const { progress: pg, teamMap } = d;
@@ -60,8 +60,8 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Live now — auto-refreshing in-play card(s) */}
-      <LiveMatchCard initial={live} />
+      {/* Featured match — live in-play, else the most recent result (auto-refreshing) */}
+      <LiveMatchCard initial={featured} />
 
       {/* Logged-in personal progress (Phase 1.2) */}
       {hub && (

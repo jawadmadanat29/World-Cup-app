@@ -5,7 +5,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TeamLabel } from "@/components/domain/team-label";
 import { STAGE_SHORT } from "@/lib/enums";
-import type { LiveMatch } from "@/lib/queries";
+import { cn } from "@/lib/utils";
+import type { FeaturedMatch } from "@/lib/queries";
 
 const POLL_MS = 30_000;
 
@@ -27,8 +28,8 @@ function eventLabel(type: string): string {
   return "Goal";
 }
 
-export function LiveMatchCard({ initial }: { initial: LiveMatch[] }) {
-  const [matches, setMatches] = React.useState<LiveMatch[]>(initial);
+export function LiveMatchCard({ initial }: { initial: FeaturedMatch[] }) {
+  const [matches, setMatches] = React.useState<FeaturedMatch[]>(initial);
 
   React.useEffect(() => {
     let active = true;
@@ -36,7 +37,7 @@ export function LiveMatchCard({ initial }: { initial: LiveMatch[] }) {
       try {
         const res = await fetch("/api/live", { cache: "no-store" });
         if (!res.ok) return;
-        const data = (await res.json()) as { matches: LiveMatch[] };
+        const data = (await res.json()) as { matches: FeaturedMatch[] };
         if (active) setMatches(data.matches ?? []);
       } catch {
         /* keep last known state on a transient failure */
@@ -55,26 +56,33 @@ export function LiveMatchCard({ initial }: { initial: LiveMatch[] }) {
   return (
     <div className="space-y-3">
       {matches.map((m) => (
-        <LiveRow key={m.id} m={m} />
+        <FeaturedRow key={m.id} m={m} />
       ))}
     </div>
   );
 }
 
-function LiveRow({ m }: { m: LiveMatch }) {
+function FeaturedRow({ m }: { m: FeaturedMatch }) {
+  const live = m.state === "LIVE";
   const stage = m.stage === "GROUP" && m.groupCode ? `Group ${m.groupCode}` : STAGE_SHORT[m.stage as keyof typeof STAGE_SHORT] ?? m.stage;
   const recent = [...m.events].reverse(); // newest first for display
 
   return (
-    <Card className="overflow-hidden border-destructive/30">
-      <div className="flex items-center justify-between border-b bg-destructive/5 px-4 py-2">
-        <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-destructive">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-destructive" />
+    <Card className={cn("overflow-hidden", live && "border-destructive/30")}>
+      <div className={cn("flex items-center justify-between border-b px-4 py-2", live ? "bg-destructive/5" : "bg-secondary/40")}>
+        {live ? (
+          <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-destructive">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-destructive" />
+            </span>
+            Live{m.minute != null && <span className="tabular-nums"> · {m.minute}&apos;</span>}
           </span>
-          Live{m.minute != null && <span className="tabular-nums"> · {m.minute}&apos;</span>}
-        </span>
+        ) : (
+          <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Latest result{m.note && <span className="font-normal normal-case"> · {m.note}</span>}
+          </span>
+        )}
         <Badge variant="muted">{stage}</Badge>
       </div>
 

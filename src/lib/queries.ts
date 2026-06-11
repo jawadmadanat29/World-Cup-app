@@ -1323,8 +1323,9 @@ export async function getComparison(viewerId: string, rivalId: string) {
 }
 
 // ---------------------------------------------------------------------------
-// Live (in-play) matches — powers the home "LIVE NOW" card. Reads the snapshot
-// the sync writes onto Match while status = LIVE, plus recent goal/card events.
+// Featured match — powers the home card. Shows live match(es) while any are in
+// play; otherwise falls back to the most recent finished match (final score +
+// events) so the card is always populated once the tournament is under way.
 // ---------------------------------------------------------------------------
 
 export interface LiveEvent {
@@ -1335,46 +1336,37 @@ export interface LiveEvent {
   player: string | null;
 }
 
-export interface LiveMatch {
+export interface FeaturedMatch {
   id: string;
+  state: "LIVE" | "FINAL";
   stage: string;
   groupCode: string | null;
   home: TeamLite | null;
   away: TeamLite | null;
   homeScore: number;
   awayScore: number;
-  minute: number | null;
+  minute: number | null; // LIVE only
+  note: string | null; // FINAL only — "Full time" | "After extra time" | "Penalties X-Y"
   events: LiveEvent[];
 }
 
-export async function getLiveMatches(): Promise<LiveMatch[]> {
+export async function getFeaturedMatches(): Promise<FeaturedMatch[]> {
   try {
-    return await queryLiveMatches();
+    return await queryFeaturedMatches();
   } catch {
-    // Degrade to "nothing live" if e.g. the live-snapshot columns aren't
-    // migrated yet — never take down the home page over a live card.
+    // Degrade to empty if e.g. the live-snapshot columns aren't migrated yet —
+    // never take down the home page over this card.
     return [];
   }
 }
 
-async function queryLiveMatches(): Promise<LiveMatch[]> {
-  const live = await prisma.match.findMany({
-    where: { status: "LIVE" },
-    select: {
-      id: true, stage: true, homeTeamId: true, awayTeamId: true,
-      liveHome: true, liveAway: true, liveMinute: true,
-      group: { select: { code: true } },
-    },
-    orderBy: { kickoff: "asc" },
-  });
-  if (live.length === 0) return [];
-
-  const teamMap = await getTeamMap();
+async function eventsByMatch(matchIds: string[], teamMap: Map<string, TeamLite>): Promise<Map<string, LiveEvent[]>> {
+  const byMatch = new Map<string, LiveEvent[]>();
+  if (matchIds.length === 0) return byMatch;
   const events = await prisma.matchEvent.findMany({
-    where: { matchId: { in: live.map((m) => m.id) } },
+    where: { matchId: { in: matchIds } },
     select: { id: true, matchId: true, type: true, minute: true, teamId: true, player: { select: { name: true } } },
   });
-  const byMatch = new Map<string, LiveEvent[]>();
   for (const e of events) {
     const list = byMatch.get(e.matchId) ?? [];
     list.push({
@@ -1386,19 +1378,75 @@ async function queryLiveMatches(): Promise<LiveMatch[]> {
     });
     byMatch.set(e.matchId, list);
   }
+  for (const [k, list] of byMatch) {
+    byMatch.set(k, list.sort((a, b) => (a.minute ?? 0) - (b.minute ?? 0)).slice(-8));
+  }
+  return byMatch;
+}
 
-  return live.map((m) => ({
-    id: m.id,
-    stage: m.stage,
-    groupCode: m.group?.code ?? null,
-    home: m.homeTeamId ? teamMap.get(m.homeTeamId) ?? null : null,
-    away: m.awayTeamId ? teamMap.get(m.awayTeamId) ?? null : null,
-    homeScore: m.liveHome ?? 0,
-    awayScore: m.liveAway ?? 0,
-    minute: m.liveMinute,
-    events: (byMatch.get(m.id) ?? [])
-      .sort((a, b) => (a.minute ?? 0) - (b.minute ?? 0))
-      .slice(-8),
-  }));
+async function queryFeaturedMatches(): Promise<FeaturedMatch[]> {
+  const teamMap = await getTeamMap();
+
+  // 1) Anything live right now wins.
+  const live = await prisma.match.findMany({
+    where: { status: "LIVE" },
+    select: {
+      id: true, stage: true, homeTeamId: true, awayTeamId: true,
+      liveHome: true, liveAway: true, liveMinute: true,
+      group: { select: { code: true } },
+    },
+    orderBy: { kickoff: "asc" },
+  });
+
+  if (live.length > 0) {
+    const byMatch = await eventsByMatch(live.map((m) => m.id), teamMap);
+    return live.map((m) => ({
+      id: m.id,
+      state: "LIVE" as const,
+      stage: m.stage,
+      groupCode: m.group?.code ?? null,
+      home: m.homeTeamId ? teamMap.get(m.homeTeamId) ?? null : null,
+      away: m.awayTeamId ? teamMap.get(m.awayTeamId) ?? null : null,
+      homeScore: m.liveHome ?? 0,
+      awayScore: m.liveAway ?? 0,
+      minute: m.liveMinute,
+      note: null,
+      events: byMatch.get(m.id) ?? [],
+    }));
+  }
+
+  // 2) Otherwise the most recent finished match.
+  const last = await prisma.match.findFirst({
+    where: { status: "COMPLETED", result: { isNot: null } },
+    orderBy: { kickoff: "desc" },
+    select: {
+      id: true, stage: true, homeTeamId: true, awayTeamId: true,
+      group: { select: { code: true } },
+      result: { select: { ftHome: true, ftAway: true, decisiveScore: true, pensHome: true, pensAway: true } },
+    },
+  });
+  if (!last || !last.result) return [];
+
+  const r = last.result;
+  const note =
+    r.decisiveScore === "PENS" && r.pensHome != null && r.pensAway != null
+      ? `Penalties ${r.pensHome}-${r.pensAway}`
+      : r.decisiveScore === "AET"
+        ? "After extra time"
+        : "Full time";
+  const byMatch = await eventsByMatch([last.id], teamMap);
+  return [{
+    id: last.id,
+    state: "FINAL" as const,
+    stage: last.stage,
+    groupCode: last.group?.code ?? null,
+    home: last.homeTeamId ? teamMap.get(last.homeTeamId) ?? null : null,
+    away: last.awayTeamId ? teamMap.get(last.awayTeamId) ?? null : null,
+    homeScore: r.ftHome,
+    awayScore: r.ftAway,
+    minute: null,
+    note,
+    events: byMatch.get(last.id) ?? [],
+  }];
 }
 
