@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import type { TeamLite, KoTie, KoSlot } from "@/lib/queries";
 import type { TournamentBuilderInput } from "@/actions/my-predictions";
 import type { ActionResult } from "@/lib/action-result";
+import { thirdPlaceAssignment } from "@/data/third-place-allocation";
 
 type Group = { id: string; code: string; name: string; teams: TeamLite[] };
 type PlayerLite = { id: string; name: string; team: string };
@@ -44,16 +45,44 @@ function shuffled<T>(arr: T[]): T[] {
 interface Ctx {
   codeToGid: Record<string, string>;
   orders: Record<string, string[]>;
-  validThirds: string[];
+  /** winner group letter (A,B,D,…) -> teamId of the 3rd-placed side it faces. */
+  thirdAssignment: Record<string, string | null>;
   tieByNum: Map<number, KoTie>;
 }
 function slotTeam(slot: KoSlot, ctx: Ctx, winners: Record<number, string>): string | null {
   switch (slot.kind) {
     case "GW": return ctx.orders[ctx.codeToGid[slot.group]]?.[0] ?? null;
     case "RU": return ctx.orders[ctx.codeToGid[slot.group]]?.[1] ?? null;
-    case "THIRD": return ctx.validThirds[slot.index] ?? null;
+    case "THIRD": return ctx.thirdAssignment[slot.winnerGroup] ?? null;
     case "WIN": return winnerOf(slot.match, ctx, winners);
   }
+}
+
+/**
+ * Apply FIFA's Annex C allocation: from the player's group rankings + their 8
+ * best-third picks, work out which group's third-placed team faces each group
+ * winner in the Round of 32. Returns {} until 8 thirds are chosen, leaving the
+ * 3rd-placed slots as TBD.
+ */
+function buildThirdAssignment(
+  groups: { id: string; code: string }[],
+  orders: Record<string, string[]>,
+  selectedThirdTeamIds: string[],
+): Record<string, string | null> {
+  const thirdOfGroup = new Map<string, string>(); // group code -> its 3rd-placed teamId
+  for (const g of groups) {
+    const t = orders[g.id]?.[2];
+    if (t) thirdOfGroup.set(g.code, t);
+  }
+  const qualGroups = [...thirdOfGroup.entries()]
+    .filter(([, teamId]) => selectedThirdTeamIds.includes(teamId))
+    .map(([code]) => code);
+  const assign = thirdPlaceAssignment(qualGroups); // winnerGroup -> thirdGroup
+  const out: Record<string, string | null> = {};
+  if (assign) for (const [winnerGroup, thirdGroup] of Object.entries(assign)) {
+    out[winnerGroup] = thirdOfGroup.get(thirdGroup) ?? null;
+  }
+  return out;
 }
 function tieTeams(mn: number, ctx: Ctx, winners: Record<number, string>): { home: string | null; away: string | null } {
   const t = ctx.tieByNum.get(mn);
@@ -118,10 +147,15 @@ export function TournamentBuilder({
 
   const thirdsPool = groups.map((g) => orders[g.id]?.[2]).filter(Boolean) as string[];
   const validThirds = bestThirds.filter((t) => thirdsPool.includes(t));
-  const ctx: Ctx = { codeToGid, orders, validThirds, tieByNum };
+  const thirdAssignment = buildThirdAssignment(groups, orders, validThirds);
+  const ctx: Ctx = { codeToGid, orders, thirdAssignment, tieByNum };
 
   const [winners, setWinners] = React.useState<Record<number, string>>(() =>
-    reconstruct(knockout, { codeToGid, orders: ordersInit, validThirds: existing.bestThirdTeamIds, tieByNum }, existing),
+    reconstruct(
+      knockout,
+      { codeToGid, orders: ordersInit, thirdAssignment: buildThirdAssignment(groups, ordersInit, existing.bestThirdTeamIds), tieByNum },
+      existing,
+    ),
   );
 
   // Derived advancing sets (= what scoring uses).

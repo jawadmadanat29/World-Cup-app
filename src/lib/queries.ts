@@ -607,7 +607,7 @@ export async function getAwardPredictionData(participantId: string) {
 export type KoSlot =
   | { kind: "GW"; group: string } // group winner
   | { kind: "RU"; group: string } // group runner-up
-  | { kind: "THIRD"; index: number } // nth best-third pick (0-based)
+  | { kind: "THIRD"; winnerGroup: string } // 3rd-placed team facing this winner (FIFA Annex C)
   | { kind: "WIN"; match: number }; // winner of an earlier KO match number
 export interface KoTie { matchNumber: number; stage: string; home: KoSlot; away: KoSlot }
 
@@ -615,7 +615,9 @@ function parseKnockout(
   koAll: { id: string; matchNumber: number; stage: string; homePlaceholder: string | null; awayPlaceholder: string | null; homeSourceMatchId: string | null; awaySourceMatchId: string | null }[],
 ): KoTie[] {
   const idToNum = new Map(koAll.map((m) => [m.id, m.matchNumber]));
-  let thirdIdx = 0;
+  // A 3rd-placed slot only knows WHICH group's third it gets after the bracket
+  // is resolved (FIFA Annex C). Its `winnerGroup` is wired up below from the
+  // group-winner it is drawn against.
   const slot = (placeholder: string | null, sourceId: string | null): KoSlot => {
     if (sourceId && idToNum.has(sourceId)) return { kind: "WIN", match: idToNum.get(sourceId)! };
     const p = placeholder ?? "";
@@ -623,13 +625,18 @@ function parseKnockout(
     if ((m = p.match(/^Winner ([A-L])$/i))) return { kind: "GW", group: m[1].toUpperCase() };
     if ((m = p.match(/^Runner-up ([A-L])$/i))) return { kind: "RU", group: m[1].toUpperCase() };
     if ((m = p.match(/Winner Match (\d+)/i))) return { kind: "WIN", match: Number(m[1]) };
-    if (/3rd/i.test(p)) return { kind: "THIRD", index: thirdIdx++ };
-    return { kind: "THIRD", index: thirdIdx++ };
+    return { kind: "THIRD", winnerGroup: "" };
   };
   const ties: KoTie[] = [];
   for (const m of [...koAll].sort((a, b) => a.matchNumber - b.matchNumber)) {
     if (m.stage === "THIRD_PLACE") continue; // not predicted in the builder
-    ties.push({ matchNumber: m.matchNumber, stage: m.stage, home: slot(m.homePlaceholder, m.homeSourceMatchId), away: slot(m.awayPlaceholder, m.awaySourceMatchId) });
+    const home = slot(m.homePlaceholder, m.homeSourceMatchId);
+    const away = slot(m.awayPlaceholder, m.awaySourceMatchId);
+    // Each R32 third-placed slot is drawn against a specific group winner; record
+    // it so the builder can apply the Annex C allocation table.
+    if (home.kind === "THIRD" && away.kind === "GW") home.winnerGroup = away.group;
+    if (away.kind === "THIRD" && home.kind === "GW") away.winnerGroup = home.group;
+    ties.push({ matchNumber: m.matchNumber, stage: m.stage, home, away });
   }
   return ties;
 }
