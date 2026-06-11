@@ -2,8 +2,7 @@
 import { prisma } from "@/lib/db";
 import { requireParticipant } from "@/lib/auth";
 import { getConfig } from "@/lib/settings";
-import { matchLockState, sectionLockState, isLocked } from "@/lib/locking";
-import { groupMatchdays, currentMatchdayKey } from "@/lib/matchday";
+import { matchLockState, sectionLockState } from "@/lib/locking";
 import {
   writeMatchPrediction,
   writeGroupPrediction,
@@ -36,37 +35,10 @@ async function sectionLocked(scope: string): Promise<boolean> {
   return sectionLockState({ deadline: d?.deadline ?? null, manualLocked: d?.manualLocked ?? false }, config.closingSoonMinutes) === "LOCKED";
 }
 
-/**
- * Progressive unlock (Q4): a match in a future matchday cannot be predicted yet,
- * even though its own kickoff lock is still open. Enforced server-side so the
- * UI gate can't be bypassed.
- */
-async function matchUpcoming(matchId: string): Promise<boolean> {
-  const config = await getConfig();
-  const matches = await prisma.match.findMany({
-    where: { homeTeamId: { not: null }, awayTeamId: { not: null } },
-    select: { id: true, kickoff: true, manualLock: true, status: true, lockBufferMinutes: true, result: { select: { id: true } } },
-  });
-  const withLock = matches.map((m) => ({
-    id: m.id,
-    kickoff: m.kickoff,
-    lockState: matchLockState(
-      { kickoff: m.kickoff, manualLock: m.manualLock, hasResult: !!m.result, status: m.status, lockBufferMinutes: m.lockBufferMinutes },
-      config.matchLockBufferMinutes, config.closingSoonMinutes,
-    ),
-  }));
-  const days = groupMatchdays(withLock, (m) => m.kickoff);
-  const currentKey = currentMatchdayKey(days, (m) => isLocked(m.lockState));
-  const currentIndex = days.findIndex((d) => d.key === currentKey);
-  const dayIndex = days.findIndex((d) => d.items.some((it) => it.id === matchId));
-  return currentIndex >= 0 && dayIndex > currentIndex;
-}
-
 export async function saveMyMatchPrediction(input: MatchPredInput): Promise<ActionResult> {
   try {
     const pid = await requireParticipant();
     if (await matchLocked(input.matchId)) return fail("This match is locked — predictions can no longer be changed.");
-    if (await matchUpcoming(input.matchId)) return fail("This matchday hasn't opened yet — it unlocks once the previous matchday ends.");
     return await writeMatchPrediction({ ...input, participantId: pid }, pid);
   } catch (e) {
     return fail(e instanceof Error ? e.message : "Could not save prediction.");
