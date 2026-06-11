@@ -160,24 +160,26 @@ export function MatchPredictions({ matchdays, totals }: { matchdays: MatchdayGro
 function MatchRow({ m }: { m: HubMatch }) {
   return (
     <Link href={`/predictions/match/${m.id}`}>
-      <div className={cn("flex items-center gap-3 px-4 py-2.5", m.editable || m.predicted ? "transition-colors hover:bg-muted/40" : "opacity-70")}>
+      <div className={cn("flex items-center gap-2 px-3 py-2.5 sm:gap-3 sm:px-4", m.editable || m.predicted ? "transition-colors hover:bg-muted/40" : "opacity-70")}>
         <Badge variant="secondary" className="hidden shrink-0 sm:inline-flex">
           {m.stage === "GROUP" && m.groupCode ? m.groupCode : STAGE_SHORT[m.stage as keyof typeof STAGE_SHORT]}
         </Badge>
-        <span className="w-16 shrink-0 text-xs tabular-nums text-muted-foreground">{timeLabel(m.kickoff)} {TOURNAMENT_TZ_LABEL}</span>
+        <span className="w-10 shrink-0 text-xs tabular-nums text-muted-foreground sm:w-16">
+          {timeLabel(m.kickoff)}<span className="hidden sm:inline"> {TOURNAMENT_TZ_LABEL}</span>
+        </span>
         <div className="grid min-w-0 flex-1 grid-cols-[1fr_auto_1fr] items-center gap-2">
-          <TeamLabel name={m.home.name} iso={m.home.isoCode} showShort flagSize="sm" className="justify-start" />
+          <TeamLabel name={m.home.name} shortName={m.home.shortName} iso={m.home.isoCode} showShort flagSize="sm" className="justify-start" />
           <span className="text-xs text-muted-foreground">v</span>
-          <TeamLabel name={m.away.name} iso={m.away.isoCode} showShort flagSize="sm" reverse className="justify-end" />
+          <TeamLabel name={m.away.name} shortName={m.away.shortName} iso={m.away.isoCode} showShort flagSize="sm" reverse className="justify-end" />
         </div>
         {m.predicted ? (
-          <Badge variant={m.complete ? "default" : "warning"} className="gap-1">
+          <Badge variant={m.complete ? "default" : "warning"} className="gap-1 px-1.5 sm:px-2.5">
             <Check className="h-3 w-3" /> {m.score}{!m.complete && " · partial"}
           </Badge>
         ) : (
-          <StatusBadge state={m.lockState} />
+          <StatusBadge state={m.lockState} className="px-1.5 sm:px-2.5" />
         )}
-        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
       </div>
     </Link>
   );
