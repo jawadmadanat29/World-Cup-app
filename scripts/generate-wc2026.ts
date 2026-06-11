@@ -108,14 +108,21 @@ function stageOf(e: Ev): string {
   if (/third place/i.test(e.summary)) return "THIRD_PLACE";
   return "FINAL";
 }
-// Standard sequential bracket feeders for rounds the ICS leaves generic.
-function feeders(num: number, stage: string): { h: number; a: number; type: string } | null {
-  if (stage === "R16") { const i = num - 89; return { h: 73 + 2 * i, a: 74 + 2 * i, type: "winner" }; }
-  if (stage === "QF") { const i = num - 97; return { h: 89 + 2 * i, a: 90 + 2 * i, type: "winner" }; }
-  if (stage === "SF") { const i = num - 101; return { h: 97 + 2 * i, a: 98 + 2 * i, type: "winner" }; }
-  if (stage === "THIRD_PLACE") return { h: 101, a: 102, type: "loser" };
-  if (stage === "FINAL") return { h: 101, a: 102, type: "winner" };
-  return null;
+// Official FIFA 2026 knockout feeders (the ICS leaves these generic). The R16/QF
+// pairings are NOT sequential — this is the published cross-bracket structure
+// (en.wikipedia.org/wiki/2026_FIFA_World_Cup_knockout_stage).
+const OFFICIAL_FEEDERS: Record<number, { h: number; a: number; type: "winner" | "loser" }> = {
+  89: { h: 74, a: 77, type: "winner" }, 90: { h: 73, a: 75, type: "winner" },
+  91: { h: 76, a: 78, type: "winner" }, 92: { h: 79, a: 80, type: "winner" },
+  93: { h: 83, a: 84, type: "winner" }, 94: { h: 81, a: 82, type: "winner" },
+  95: { h: 86, a: 88, type: "winner" }, 96: { h: 85, a: 87, type: "winner" },
+  97: { h: 89, a: 90, type: "winner" }, 98: { h: 93, a: 94, type: "winner" },
+  99: { h: 91, a: 92, type: "winner" }, 100: { h: 95, a: 96, type: "winner" },
+  101: { h: 97, a: 98, type: "winner" }, 102: { h: 99, a: 100, type: "winner" },
+  103: { h: 101, a: 102, type: "loser" }, 104: { h: 101, a: 102, type: "winner" },
+};
+function feeders(num: number): { h: number; a: number; type: string } | null {
+  return OFFICIAL_FEEDERS[num] ?? null;
 }
 
 const groupLayout: Record<string, string[]> = {};
@@ -143,7 +150,7 @@ for (const e of events) {
     fixture.homePlaceholder = h;
     fixture.awayPlaceholder = a;
   } else {
-    const f = feeders(e.num, stage)!;
+    const f = feeders(e.num)!;
     fixture.homeSourceMatchNumber = f.h;
     fixture.awaySourceMatchNumber = f.a;
     fixture.homeSourceType = f.type;

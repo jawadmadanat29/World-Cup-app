@@ -394,13 +394,19 @@ function BracketRound({ stage, knockout, ctx, winners, teamMap, onPick, isFinal 
         disabled={!teamId}
         onClick={() => teamId && onPick(mn, teamId)}
         className={cn(
-          "flex w-full items-center gap-2 rounded-md border px-2.5 py-2 text-left text-sm transition-colors",
-          !teamId ? "cursor-not-allowed border-dashed text-muted-foreground" : selected ? "border-primary bg-primary/10 font-medium" : "hover:bg-secondary/60",
+          "flex w-full items-center gap-2.5 rounded-md border px-3 py-2.5 text-left text-sm transition-all",
+          !teamId
+            ? "cursor-not-allowed border-dashed bg-muted/20 text-muted-foreground"
+            : selected
+              ? "border-primary bg-primary/10 font-semibold text-foreground shadow-sm ring-1 ring-primary/30"
+              : "border-border bg-card hover:border-primary/50 hover:bg-secondary/50",
         )}
       >
         {t ? <Flag iso={t.isoCode} /> : <span className="h-3 w-4 rounded-[2px] bg-muted" />}
         <span className="min-w-0 flex-1 truncate">{t ? t.name : "TBD"}</span>
-        {selected && <Check className="h-4 w-4 shrink-0 text-primary" />}
+        {selected
+          ? <Check className="h-4 w-4 shrink-0 text-primary" />
+          : teamId && <span className="shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">pick</span>}
       </button>
     );
   }
@@ -415,14 +421,21 @@ function BracketRound({ stage, knockout, ctx, winners, teamMap, onPick, isFinal 
         <p className="text-xs text-muted-foreground">{isFinal ? "Your two finalists meet here — choose who lifts the trophy." : "Winners advance to the next round automatically."}</p>
       </CardHeader>
       <CardContent>
-        <div className={cn("grid gap-3", isFinal ? "max-w-sm" : "sm:grid-cols-2")}>
-          {ties.map((t) => {
+        <div className={cn("grid gap-3 sm:gap-4", isFinal ? "max-w-sm" : "sm:grid-cols-2")}>
+          {ties.map((t, idx) => {
             const { home, away } = tieTeams(t.matchNumber, ctx, winners);
             const w = winnerOf(t.matchNumber, ctx, winners);
             return (
-              <div key={t.matchNumber} className="space-y-1.5 rounded-lg border p-2">
+              <div key={t.matchNumber} className="space-y-1.5 rounded-xl border bg-secondary/30 p-2.5">
+                <div className="px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {isFinal ? "Final" : `Match ${idx + 1}`}
+                </div>
                 <TeamRow mn={t.matchNumber} teamId={home} selected={!!w && w === home} />
-                <div className="text-center text-[10px] font-medium uppercase tracking-wide text-muted-foreground">vs</div>
+                <div className="flex items-center gap-2 px-1">
+                  <span className="h-px flex-1 bg-border" />
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">vs</span>
+                  <span className="h-px flex-1 bg-border" />
+                </div>
                 <TeamRow mn={t.matchNumber} teamId={away} selected={!!w && w === away} />
               </div>
             );
