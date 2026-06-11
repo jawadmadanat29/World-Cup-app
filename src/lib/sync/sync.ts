@@ -25,7 +25,8 @@ const ALIASES: Record<string, string> = {
   bosniaherzegovina: "BIH", bosniaandherzegovina: "BIH", curacao: "CUW",
 };
 
-const SYNC_THROTTLE_MS = 60_000;
+// Below 60s so a 1-minute cron's jitter never trips the throttle and skips a run.
+const SYNC_THROTTLE_MS = 45_000;
 // Cap how many /fixtures/events calls we make per run — keeps a 1-2 min cron
 // well within a 7,500/day quota even if several matches are live at once.
 const MAX_EVENT_FIXTURES_PER_RUN = 6;
