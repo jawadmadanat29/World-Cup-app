@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowUpRight, CalendarDays, Trophy, BarChart3, Activity, ListChecks, ChevronRight, Goal, Users, Clock } from "lucide-react";
 import { getHomeData, getPredictionHub, getFeaturedMatches } from "@/lib/queries";
 import { LiveMatchCard } from "@/components/domain/live-match-card";
+import { PredictionChecklist } from "@/components/domain/prediction-checklist";
 import { Countdown } from "@/components/domain/countdown";
 import { getCurrentParticipantId } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,6 +36,14 @@ export default async function HomePage() {
   const hubPct = hubDenom ? Math.round((hubNumer / hubDenom) * 100) : 0;
   const continueHref = hub && !hub.tournamentDone ? "/predictions?mode=tournament" : "/predictions";
   const wildcardsLeft = hub ? hub.wildcardsMax - hub.wildcardsUsed : 0;
+  // Next still-open matches, soonest first — for the "did I miss anything" checklist.
+  const nextPicks = hub
+    ? hub.matchdays
+        .flatMap((day) => day.matches)
+        .filter((m) => m.editable)
+        .sort((a, b) => +new Date(a.kickoff) - +new Date(b.kickoff))
+        .slice(0, 5)
+    : [];
   const favIso = (favoriteTeamId: string | null) => (favoriteTeamId ? teamMap.get(favoriteTeamId)?.isoCode ?? null : null);
   const tournamentStarted = d.stats.completedMatches > 0;
   const tProgress = d.stats.totalMatches ? Math.round((d.stats.completedMatches / d.stats.totalMatches) * 100) : 0;
@@ -60,9 +69,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Featured match — live in-play, else the most recent result (auto-refreshing) */}
-      <LiveMatchCard initial={featured} />
-
       {/* Logged-in personal progress (Phase 1.2) */}
       {hub && (
         <Card className="border-primary/30">
@@ -80,12 +86,16 @@ export default async function HomePage() {
               <Badge variant="secondary">{hub.matchTotals.complete}/{hub.matchTotals.total} matches predicted</Badge>
               <Badge variant="secondary">Wildcards {wildcardsLeft} left</Badge>
             </div>
+            <PredictionChecklist matches={nextPicks} />
             <Button asChild className="w-full sm:w-auto">
               <Link href={continueHref}>Continue Predictions <ArrowUpRight className="h-4 w-4" /></Link>
             </Button>
           </CardContent>
         </Card>
       )}
+
+      {/* Featured match — live in-play, else the most recent result (auto-refreshing) */}
+      <LiveMatchCard initial={featured} />
 
       {/* Next prediction lock — live countdown */}
       {d.ribbon[0] && (
