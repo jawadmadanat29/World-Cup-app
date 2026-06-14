@@ -30,6 +30,10 @@ const SYNC_THROTTLE_MS = 45_000;
 // Cap how many /fixtures/events calls we make per run — keeps a 1-2 min cron
 // well within a 7,500/day quota even if several matches are live at once.
 const MAX_EVENT_FIXTURES_PER_RUN = 6;
+// Only pull events for matches that are live or finished within this window. A
+// long-finished match's events never change, so re-fetching them every run just
+// burns quota (this was the main cause of blowing past the daily limit).
+const RECENT_FINISH_WINDOW_MS = 4 * 60 * 60 * 1000;
 // How far apart (in ms) a knockout fixture's kickoff may be from our scheduled
 // placeholder match's kickoff and still be considered the same fixture.
 const KNOCKOUT_MATCH_WINDOW_MS = 4 * 24 * 60 * 60 * 1000;
@@ -113,7 +117,7 @@ export async function runSync({ force = false }: { force?: boolean } = {}): Prom
 
     let updated = 0, matched = 0, unmatched = 0, skippedManual = 0, koFilled = 0;
     const matchUpdates: { id: string; data: Record<string, unknown> }[] = [];
-    const eventCandidates: { apiFixtureId: number; matchId: string }[] = [];
+    const eventCandidates: { apiFixtureId: number; matchId: string; live: boolean }[] = [];
 
     for (const fx of fixtures) {
       if (!fx.apiFixtureId) continue;
@@ -210,9 +214,10 @@ export async function runSync({ force = false }: { force?: boolean } = {}): Prom
         }
       }
 
-      // ---- Events candidates (live or just-finished, non-admin) --------
-      if ((fx.live || fx.finished) && !isAdminResult) {
-        eventCandidates.push({ apiFixtureId: fx.apiFixtureId, matchId: m.id });
+      // ---- Events candidates (live or recently-finished, non-admin) ----
+      const recentlyFinished = fx.finished && Date.now() - m.kickoff.getTime() < RECENT_FINISH_WINDOW_MS;
+      if ((fx.live || recentlyFinished) && !isAdminResult) {
+        eventCandidates.push({ apiFixtureId: fx.apiFixtureId, matchId: m.id, live: fx.live });
       }
     }
 
@@ -225,6 +230,8 @@ export async function runSync({ force = false }: { force?: boolean } = {}): Prom
       const players = await prisma.player.findMany({ where: { apiPlayerId: { not: null } }, select: { id: true, apiPlayerId: true } });
       const byApiPlayerId = new Map(players.map((p) => [p.apiPlayerId!, p.id]));
 
+      // Live matches first so the per-run cap never starves an in-play game.
+      eventCandidates.sort((a, b) => Number(b.live) - Number(a.live));
       for (const c of eventCandidates.slice(0, MAX_EVENT_FIXTURES_PER_RUN)) {
         const events = await provider.fetchEvents(c.apiFixtureId);
         const rows = events.map((e) => ({
