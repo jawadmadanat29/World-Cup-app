@@ -903,20 +903,34 @@ export async function getMatchDetail(matchId: string) {
       playerName: e.playerId ? playerMap.get(e.playerId)?.name ?? null : null,
     }));
 
+  // Points each participant earned on THIS match (only exists once it's scored).
+  const pointRows = revealed
+    ? await prisma.pointTransaction.groupBy({ by: ["participantId"], where: { matchId: m.id }, _sum: { points: true } })
+    : [];
+  const pointsByParticipant = new Map(pointRows.map((r) => [r.participantId, r._sum.points ?? 0]));
+  const maxMatchPoints = pointsByParticipant.size ? Math.max(...pointsByParticipant.values()) : 0;
+
   const predictions = revealed
-    ? m.matchPredictions.map((p) => ({
-        participant: {
-          id: p.participant.id, name: p.participant.name, initials: p.participant.initials, accentColor: p.participant.accentColor,
-        },
-        homeGoals: p.homeGoals,
-        awayGoals: p.awayGoals,
-        outcome: p.predictedOutcome,
-        advanceTeam: p.advanceTeamId ? teamMap.get(p.advanceTeamId)?.shortName ?? null : null,
-        firstTeamToScore: p.firstTeamToScore,
-        btts: p.bttsPrediction,
-        scorers: p.scorerPicks.map((s) => ({ name: playerMap.get(s.playerId)?.name ?? "Unknown", type: s.pickType })),
-        wildcard: wildcardSet.has(p.participant.id),
-      }))
+    ? m.matchPredictions
+        .map((p) => {
+          const points = pointsByParticipant.get(p.participant.id) ?? 0;
+          return {
+            participant: {
+              id: p.participant.id, name: p.participant.name, initials: p.participant.initials, accentColor: p.participant.accentColor,
+            },
+            homeGoals: p.homeGoals,
+            awayGoals: p.awayGoals,
+            outcome: p.predictedOutcome,
+            advanceTeam: p.advanceTeamId ? teamMap.get(p.advanceTeamId)?.shortName ?? null : null,
+            firstTeamToScore: p.firstTeamToScore,
+            btts: p.bttsPrediction,
+            scorers: p.scorerPicks.map((s) => ({ name: playerMap.get(s.playerId)?.name ?? "Unknown", type: s.pickType })),
+            wildcard: wildcardSet.has(p.participant.id),
+            points,
+            topScorer: maxMatchPoints > 0 && points === maxMatchPoints,
+          };
+        })
+        .sort((a, b) => b.points - a.points)
     : [];
 
   // Consensus (only meaningful once revealed)
@@ -1206,6 +1220,9 @@ export async function getPublicProfile(id: string) {
     exactScores: stats.exactScores,
     longestStreak: stats.longestStreak,
     championCorrect,
+    totalPoints: row?.total ?? 0,
+    accuracyPct: stats.accuracyPct,
+    scoredMatches: stats.scoredMatches,
   });
 
   return { participant, row, favorite, avgTotal, leaderboardSize: leaderboard.length, matchStats: { revealed: revealedMatches.length, hidden: hiddenMatches }, revealedMatches, tournament, stats, achievements };

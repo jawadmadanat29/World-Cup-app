@@ -58,17 +58,19 @@ describe("computePlayerStats", () => {
 
 describe("computeAchievements", () => {
   it("awards the right badges from the data", () => {
-    const a = computeAchievements({ preds, exactScores: 5, longestStreak: 5, championCorrect: true });
+    const a = computeAchievements({ preds, exactScores: 5, longestStreak: 5, championCorrect: true, totalPoints: 100, accuracyPct: 80, scoredMatches: 12 });
     const earned = Object.fromEntries(a.map((x) => [x.key, x.earned]));
     expect(earned.ORACLE).toBe(true);
     expect(earned.EXACTA).toBe(true); // 5 exact
     expect(earned.HOT_STREAK).toBe(true); // streak 5
     expect(earned.UNDERDOG).toBe(true); // m4 away upset
     expect(earned.PERFECT_DAY).toBe(true); // day2: m3 + m4 both correct
+    expect(earned.CENTURION).toBe(true); // 100 points
+    expect(earned.SHARP_EYE).toBe(true); // 80% over 12
   });
 
   it("locks badges when thresholds aren't met", () => {
-    const a = computeAchievements({ preds: [], exactScores: 1, longestStreak: 1, championCorrect: false });
+    const a = computeAchievements({ preds: [], exactScores: 1, longestStreak: 1, championCorrect: false, totalPoints: 0, accuracyPct: 0, scoredMatches: 0 });
     expect(a.every((x) => !x.earned)).toBe(true);
   });
 });

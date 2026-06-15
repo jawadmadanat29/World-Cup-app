@@ -98,6 +98,9 @@ export function computeAchievements(args: {
   exactScores: number;
   longestStreak: number;
   championCorrect: boolean; // champion pick matched, final played
+  totalPoints: number;
+  accuracyPct: number; // 0..100
+  scoredMatches: number; // matches with a known result the player predicted
 }): Achievement[] {
   const scored = args.preds.filter((p) => p.actualOutcome != null);
   const correctAwayWin = scored.some((p) => p.predictedOutcome === "AWAY" && p.actualOutcome === "AWAY");
@@ -119,5 +122,10 @@ export function computeAchievements(args: {
     { key: "HOT_STREAK", label: "Hot Streak", description: "5 correct results in a row", earned: args.longestStreak >= 5 },
     { key: "UNDERDOG", label: "Underdog Hunter", description: "Called an away-team upset correctly", earned: correctAwayWin },
     { key: "PERFECT_DAY", label: "Perfect Day", description: "Every result right on a matchday", earned: perfectDay },
+    // --- New (Phase 3) ---
+    { key: "CENTURION", label: "Centurion", description: "Reached 100 total points", earned: args.totalPoints >= 100 },
+    { key: "SHARPSHOOTER", label: "Sharpshooter", description: "Nailed 10 exact scorelines", earned: args.exactScores >= 10 },
+    { key: "ON_FIRE", label: "On Fire", description: "10 correct results in a row", earned: args.longestStreak >= 10 },
+    { key: "SHARP_EYE", label: "Sharp Eye", description: "75%+ result accuracy over 10+ matches", earned: args.scoredMatches >= 10 && args.accuracyPct >= 75 },
   ];
 }

@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { ArrowUpRight, CalendarDays, Trophy, BarChart3, Activity, ListChecks, ChevronRight, Goal, Users, Clock } from "lucide-react";
-import { getHomeData, getPredictionHub, getFeaturedMatches } from "@/lib/queries";
+import { getHomeData, getPredictionHub, getFeaturedMatches, getLatestPredictions } from "@/lib/queries";
 import { LiveMatchCard } from "@/components/domain/live-match-card";
 import { PredictionChecklist } from "@/components/domain/prediction-checklist";
+import { ActivityFeed } from "@/components/domain/activity-feed";
 import { Countdown } from "@/components/domain/countdown";
 import { getCurrentParticipantId } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,10 +22,11 @@ export const dynamic = "force-dynamic";
 export default async function HomePage() {
   const participantId = await getCurrentParticipantId();
   const loggedIn = !!participantId;
-  const [d, hub, featured] = await Promise.all([
+  const [d, hub, featured, feed] = await Promise.all([
     getHomeData(),
     loggedIn ? getPredictionHub(participantId) : Promise.resolve(null),
     getFeaturedMatches(),
+    getLatestPredictions(12),
   ]);
   const startHref = loggedIn ? "/predictions" : "/signup";
   const { progress: pg, teamMap } = d;
@@ -96,6 +98,16 @@ export default async function HomePage() {
 
       {/* Featured match — live in-play, else the most recent result (auto-refreshing) */}
       <LiveMatchCard initial={featured} />
+
+      {/* Activity feed — latest happenings across the league */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base"><Activity className="h-4 w-4" /> Latest activity</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <ActivityFeed events={feed} />
+        </CardContent>
+      </Card>
 
       {/* Next prediction lock — live countdown */}
       {d.ribbon[0] && (

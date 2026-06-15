@@ -16,6 +16,7 @@ import { EmptyState } from "@/components/domain/empty-state";
 import { ordinal } from "@/lib/format";
 import { STAGE_SHORT } from "@/lib/enums";
 import { cn } from "@/lib/utils";
+import { AchievementBadges } from "@/components/domain/achievement-badges";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +50,8 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
           </div>
         }
       />
+
+      <AchievementBadges achievements={achievements} className="-mt-2" />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Stat label="Total points" value={row?.total ?? 0} icon={Trophy} accent="gold" />

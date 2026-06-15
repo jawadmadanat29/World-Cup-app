@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Activity, Sparkles, Trophy, MessageSquare, Target, Crown } from "lucide-react";
+import { Activity } from "lucide-react";
 import { getLeaderboard, getTeamMap, getLatestPredictions } from "@/lib/queries";
 import { getCurrentParticipantId } from "@/lib/auth";
 import { PageHeader } from "@/components/domain/page-header";
@@ -8,13 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ParticipantAvatar, FavoriteFlag } from "@/components/domain/participant-avatar";
 import { Movement } from "@/components/domain/movement";
 import { EmptyState } from "@/components/domain/empty-state";
-import { timeUntil } from "@/lib/format";
+import { ActivityFeed } from "@/components/domain/activity-feed";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Leaderboard" };
-
-const FEED_ICON = { MATCH: Activity, WILDCARD: Sparkles, TOURNAMENT: Trophy, BOLD: MessageSquare, EXACT: Target, LEAD: Crown } as const;
 
 export default async function LeaderboardPage() {
   const [rows, teamMap, meId] = await Promise.all([getLeaderboard(), getTeamMap(), getCurrentParticipantId()]);
@@ -55,22 +53,7 @@ export default async function LeaderboardPage() {
       <Card>
         <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Activity className="h-4 w-4" /> Latest predictions</CardTitle></CardHeader>
         <CardContent className="space-y-2.5 pt-0">
-          {feed.length ? feed.map((e) => {
-            const Icon = FEED_ICON[e.kind];
-            return (
-              <div key={e.id} className="flex items-center gap-2.5 text-sm">
-                <ParticipantAvatar initials={e.participant.initials} color={e.participant.accentColor} avatarId={e.participant.avatarId} size="sm" />
-                <span className="min-w-0 flex-1 truncate">
-                  <Link href={`/participants/${e.participant.id}`} className="font-medium hover:underline">{e.participant.nickname || e.participant.name.split(" ")[0]}</Link>
-                  <span className="text-muted-foreground"> {e.text}</span>
-                </span>
-                <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                <span className="shrink-0 whitespace-nowrap text-xs text-muted-foreground">{timeUntil(e.at)}</span>
-              </div>
-            );
-          }) : (
-            <EmptyState title="Nothing yet" description="Predictions appear here as they’re made — and match picks become visible once each match kicks off." icon={Activity} />
-          )}
+          <ActivityFeed events={feed} />
         </CardContent>
       </Card>
 

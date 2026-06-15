@@ -10,6 +10,7 @@ import { Flag } from "@/components/domain/flag";
 import { ScorePill } from "@/components/domain/score-pill";
 import { StatusBadge } from "@/components/domain/status-badge";
 import { ParticipantAvatar } from "@/components/domain/participant-avatar";
+import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/domain/empty-state";
 import { STAGE_LABELS } from "@/lib/enums";
 import { KickoffTime } from "@/components/domain/kickoff-time";
@@ -131,14 +132,20 @@ export default async function MatchPage({ params }: { params: Promise<{ matchId:
               {m.predictions.length ? (
                 <div className="space-y-1">
                   {m.predictions.map((p) => (
-                    <div key={p.participant.id} className="flex items-center gap-3 rounded-md px-2 py-2">
+                    <div key={p.participant.id} className={cn("flex items-center gap-3 rounded-md px-2 py-2", p.topScorer && "bg-gold/10")}>
                       <ParticipantAvatar initials={p.participant.initials} color={p.participant.accentColor} size="sm" />
                       <Link href={`/participants/${p.participant.id}`} className="min-w-0 flex-1 truncate text-sm font-medium hover:underline">
                         {p.participant.name}
+                        {p.topScorer && <span title="Top scorer this match"> 🏆</span>}
                       </Link>
                       {p.wildcard && <Badge variant="gold">×2</Badge>}
                       {p.advanceTeam && <Badge variant="outline" className="gap-1">{p.advanceTeam} <ArrowRight className="h-3 w-3" /></Badge>}
                       <ScorePill home={p.homeGoals} away={p.awayGoals} muted />
+                      {m.result && (
+                        <span className={cn("w-12 shrink-0 text-right text-sm font-semibold tabular-nums", p.points > 0 ? "text-success" : "text-muted-foreground")}>
+                          {p.points > 0 ? "+" : ""}{p.points} pt{Math.abs(p.points) === 1 ? "" : "s"}
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>
