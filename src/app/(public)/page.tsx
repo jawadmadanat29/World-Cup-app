@@ -11,11 +11,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { TeamLabel } from "@/components/domain/team-label";
-import { ParticipantBadge, ParticipantAvatar, FavoriteFlag } from "@/components/domain/participant-avatar";
+import { ParticipantBadge } from "@/components/domain/participant-avatar";
 import { Movement } from "@/components/domain/movement";
 import { EmptyState } from "@/components/domain/empty-state";
 import { KickoffTime } from "@/components/domain/kickoff-time";
-import { timeUntil } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -256,27 +255,6 @@ export default async function HomePage() {
           </CardContent>
         </Card>
 
-        {/* Friend Activity */}
-        <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Activity className="h-4 w-4" /> Friend activity</CardTitle></CardHeader>
-          <CardContent className="space-y-2.5 pt-0">
-            {d.activity.length > 0 ? (
-              d.activity.map((a) => (
-                <div key={a.id} className="flex items-center gap-2.5 text-sm">
-                  <ParticipantAvatar initials={a.participant.initials} color={a.participant.accentColor} avatarId={a.participant.avatarId} size="sm" />
-                  <span className="min-w-0 flex-1 truncate">
-                    <Link href={`/participants/${a.participant.id}`} className="font-medium hover:underline">{a.participant.name.split(" ")[0]}</Link>
-                    <FavoriteFlag iso={favIso(a.participant.favoriteTeamId)} className="mx-1" />
-                    <span className="text-muted-foreground"> {a.text}</span>
-                  </span>
-                  <span className="shrink-0 whitespace-nowrap text-xs text-muted-foreground">{timeUntil(a.at)}</span>
-                </div>
-              ))
-            ) : (
-              <EmptyState title="No activity yet" description="Your friends’ predictions and wildcards show up here." icon={Activity} />
-            )}
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
