@@ -21,7 +21,10 @@ async function authorized(req: Request): Promise<boolean> {
 async function handle(req: Request) {
   if (!(await authorized(req))) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const out = await runSync({ force: true });
-  return NextResponse.json(out, { status: out.status === "FAILED" ? 502 : 200 });
+  // Always 200 so an unattended scheduler (cron-job.org) never auto-disables the
+  // job over a transient failure like an exhausted daily quota — the run's real
+  // outcome is in the body and on the admin sync page, and it self-heals next run.
+  return NextResponse.json(out, { status: 200 });
 }
 
 export async function GET(req: Request) {
