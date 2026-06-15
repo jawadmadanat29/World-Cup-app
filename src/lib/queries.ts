@@ -1062,16 +1062,17 @@ export async function getLatestPredictions(limit = 15, leaderboard?: Leaderboard
   }
 
   // Exact-score hits (privacy-safe: a MATCH_EXACT point only exists once the
-  // match has a result, so it's already public).
+  // match has a result, so it's already public). Timestamp + id are derived from
+  // the MATCH, not the point transaction — recompute deletes/recreates those
+  // every sync, which would otherwise make old hits resurface as "just now".
   const exactTxns = await prisma.pointTransaction.findMany({
-    where: { source: "MATCH_EXACT" },
-    orderBy: { createdAt: "desc" },
-    take: 20,
-    select: { id: true, participantId: true, matchId: true, createdAt: true },
+    where: { source: "MATCH_EXACT", matchId: { not: null } },
+    take: 50,
+    select: { participantId: true, matchId: true },
   });
   const exactMatchIds = [...new Set(exactTxns.map((t) => t.matchId).filter((x): x is string => !!x))];
   const exactMatches = exactMatchIds.length
-    ? await prisma.match.findMany({ where: { id: { in: exactMatchIds } }, select: { id: true, homeTeamId: true, awayTeamId: true } })
+    ? await prisma.match.findMany({ where: { id: { in: exactMatchIds } }, select: { id: true, kickoff: true, homeTeamId: true, awayTeamId: true } })
     : [];
   const exactMap = new Map(exactMatches.map((m) => [m.id, m]));
   for (const t of exactTxns) {
@@ -1079,7 +1080,9 @@ export async function getLatestPredictions(limit = 15, leaderboard?: Leaderboard
     const m = t.matchId ? exactMap.get(t.matchId) : null;
     const home = m?.homeTeamId ? teamMap.get(m.homeTeamId) : null;
     const away = m?.awayTeamId ? teamMap.get(m.awayTeamId) : null;
-    if (part && home && away) events.push({ id: `e-${t.id}`, kind: "EXACT", participant: part, text: `nailed the exact score in ${home.shortName} v ${away.shortName}`, at: t.createdAt });
+    if (part && m && home && away) {
+      events.push({ id: `e-${t.participantId}-${m.id}`, kind: "EXACT", participant: part, text: `nailed the exact score in ${home.shortName} v ${away.shortName}`, at: m.kickoff });
+    }
   }
 
   // "Moved into 1st" — from leaderboard movement (current leader who climbed).
