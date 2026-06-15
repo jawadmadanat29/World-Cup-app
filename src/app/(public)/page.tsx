@@ -25,7 +25,7 @@ export default async function HomePage() {
     getHomeData(),
     loggedIn ? getPredictionHub(participantId) : Promise.resolve(null),
     getFeaturedMatches(),
-    getLatestPredictions(12),
+    getLatestPredictions(30),
   ]);
   const startHref = loggedIn ? "/predictions" : "/signup";
   const { progress: pg, teamMap } = d;

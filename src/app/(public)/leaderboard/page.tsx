@@ -16,7 +16,7 @@ export const metadata: Metadata = { title: "Leaderboard" };
 
 export default async function LeaderboardPage() {
   const [rows, teamMap, meId] = await Promise.all([getLeaderboard(), getTeamMap(), getCurrentParticipantId()]);
-  const feed = await getLatestPredictions(15, rows);
+  const feed = await getLatestPredictions(30, rows);
   const favIso = (id: string | null) => (id ? teamMap.get(id)?.isoCode ?? null : null);
 
   return (

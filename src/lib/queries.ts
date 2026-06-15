@@ -1003,8 +1003,9 @@ export async function getLiveComparison() {
 //  - tournament submissions shown as "submitted" with NO selections revealed
 export interface FeedEvent {
   id: string;
-  kind: "MATCH" | "TOURNAMENT" | "WILDCARD" | "BOLD" | "EXACT" | "LEAD";
-  participant: ParticipantLite;
+  // PICK = privacy-safe "made a pick" (no contents); LOCK = a match locked (system event).
+  kind: "MATCH" | "TOURNAMENT" | "WILDCARD" | "BOLD" | "EXACT" | "LEAD" | "PICK" | "LOCK";
+  participant: ParticipantLite | null; // null for system events (LOCK)
   text: string;
   at: Date;
 }
@@ -1025,12 +1026,21 @@ export async function getLatestPredictions(limit = 15, leaderboard?: Leaderboard
       { kickoff: p.match.kickoff, manualLock: p.match.manualLock, hasResult: !!p.match.result, status: p.match.status, lockBufferMinutes: p.match.lockBufferMinutes },
       config.matchLockBufferMinutes, config.closingSoonMinutes, now,
     ));
-    if (!locked) continue; // privacy gate
     const part = pmap.get(p.participantId);
     if (!part) continue;
     const home = p.match.homeTeamId ? teamMap.get(p.match.homeTeamId) : null;
     const away = p.match.awayTeamId ? teamMap.get(p.match.awayTeamId) : null;
-    if (p.homeGoals != null && p.awayGoals != null && home && away) {
+    if (!home || !away) continue;
+
+    if (!locked) {
+      // Privacy-safe: show that a pick was made, never its contents, before lock.
+      if (p.homeGoals != null && p.awayGoals != null) {
+        events.push({ id: `pick-${p.id}`, kind: "PICK", participant: part, text: `made their pick for ${home.shortName} v ${away.shortName}`, at: p.updatedAt });
+      }
+      continue;
+    }
+    // Locked → reveal the contents.
+    if (p.homeGoals != null && p.awayGoals != null) {
       events.push({ id: `m-${p.id}`, kind: "MATCH", participant: part, text: `predicted ${home.shortName} ${p.homeGoals}–${p.awayGoals} ${away.shortName}`, at: p.updatedAt });
     }
     if (p.wildcardPick) {
@@ -1095,6 +1105,31 @@ export async function getLatestPredictions(limit = 15, leaderboard?: Leaderboard
       const part = pmap.get(r.participant.id);
       if (part) events.push({ id: `lead-${r.participant.id}`, kind: "LEAD", participant: part, text: "moved into 1st place 👑", at });
     }
+  }
+
+  // Match locks — once a match kicks off (locks), picks are revealed.
+  const lockMatches = await prisma.match.findMany({
+    where: { homeTeamId: { not: null }, awayTeamId: { not: null } },
+    orderBy: { kickoff: "desc" },
+    take: 25,
+    select: { id: true, kickoff: true, homeTeamId: true, awayTeamId: true, manualLock: true, status: true, lockBufferMinutes: true, result: { select: { id: true } } },
+  });
+  for (const m of lockMatches) {
+    const ls = matchLockState(
+      { kickoff: m.kickoff, manualLock: m.manualLock, hasResult: !!m.result, status: m.status, lockBufferMinutes: m.lockBufferMinutes },
+      config.matchLockBufferMinutes, config.closingSoonMinutes, now,
+    );
+    if (!isLocked(ls)) continue;
+    const home = m.homeTeamId ? teamMap.get(m.homeTeamId) : null;
+    const away = m.awayTeamId ? teamMap.get(m.awayTeamId) : null;
+    if (home && away) events.push({ id: `lock-${m.id}`, kind: "LOCK", participant: null, text: `${home.shortName} v ${away.shortName} locked — picks revealed`, at: m.kickoff });
+  }
+
+  // Tournament forecast lock (system event).
+  const tourDeadline = await prisma.predictionDeadline.findUnique({ where: { scope: "TOURNAMENT" } });
+  const tourLocked = sectionLockState({ deadline: tourDeadline?.deadline ?? null, manualLocked: tourDeadline?.manualLocked ?? false }, config.closingSoonMinutes, now) === "LOCKED";
+  if (tourLocked && tourDeadline?.deadline) {
+    events.push({ id: "lock-tournament", kind: "LOCK", participant: null, text: "Tournament forecasts locked — everyone’s brackets are in", at: tourDeadline.deadline });
   }
 
   return events.sort((a, b) => +b.at - +a.at).slice(0, limit);
