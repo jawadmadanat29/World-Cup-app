@@ -1158,6 +1158,21 @@ export async function getPublicProfile(id: string) {
     orderBy: { match: { matchNumber: "asc" } },
   });
   const wildcardMatchIds = new Set((await prisma.wildcard.findMany({ where: { participantId: id }, select: { matchId: true } })).map((w) => w.matchId));
+
+  // Per-match points ledger — itemised reasons so anyone can audit every point.
+  const ptxns = await prisma.pointTransaction.findMany({
+    where: { participantId: id, matchId: { not: null } },
+    select: { matchId: true, points: true, reason: true },
+  });
+  const ledgerByMatch = new Map<string, { total: number; items: { reason: string; points: number }[] }>();
+  for (const t of ptxns) {
+    if (!t.matchId) continue;
+    const e = ledgerByMatch.get(t.matchId) ?? { total: 0, items: [] };
+    e.total += t.points;
+    e.items.push({ reason: t.reason, points: t.points });
+    ledgerByMatch.set(t.matchId, e);
+  }
+
   let hiddenMatches = 0;
   const revealedMatches = mpreds.flatMap((p) => {
     const ls = matchLockState(
@@ -1182,6 +1197,10 @@ export async function getPublicProfile(id: string) {
       multi: p.scorerPicks.filter((s) => s.pickType === "MULTI").map((s) => pname(s.playerId)).filter((x): x is string => !!x)[0] ?? null,
       boldCall: p.wildcardPick,
       wildcard: wildcardMatchIds.has(p.matchId),
+      points: ledgerByMatch.get(p.matchId)?.total ?? 0,
+      breakdown: ledgerByMatch.get(p.matchId)?.items ?? [],
+      predictedAt: p.updatedAt,
+      kickoff: p.match.kickoff,
     }];
   });
 

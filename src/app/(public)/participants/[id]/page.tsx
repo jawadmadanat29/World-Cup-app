@@ -173,6 +173,9 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
                       </div>
                       {m.result && <Badge variant="muted" className="shrink-0">actual {m.result}</Badge>}
                       {m.wildcard && <Sparkles className="h-4 w-4 shrink-0 text-gold" />}
+                      {m.result && (
+                        <Badge variant={m.points > 0 ? "default" : "muted"} className="shrink-0 tabular-nums">{m.points >= 0 ? "+" : ""}{m.points} pts</Badge>
+                      )}
                     </div>
                     {(chips.length > 0 || m.boldCall) && (
                       <div className="mt-2 flex flex-wrap gap-1.5 pl-0 sm:pl-12">
@@ -180,6 +183,27 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
                         {m.boldCall && <Badge variant="gold" className="gap-1 font-normal"><MessageSquare className="h-3 w-3" /> {m.boldCall}</Badge>}
                       </div>
                     )}
+                    {/* Auditable points breakdown + lock-in proof */}
+                    {m.result && m.breakdown.length > 0 && (
+                      <details className="mt-2 sm:ml-12">
+                        <summary className="cursor-pointer select-none text-xs text-muted-foreground hover:text-foreground">
+                          How these {m.points >= 0 ? "+" : ""}{m.points} pts break down
+                        </summary>
+                        <div className="mt-1 space-y-0.5 rounded-md bg-muted/40 px-3 py-2 text-xs">
+                          {m.breakdown.map((b, i) => (
+                            <div key={i} className="flex items-center justify-between gap-2">
+                              <span className="text-muted-foreground">{b.reason.replace(/\s*\([+-]?\d+\)\s*$/, "")}</span>
+                              <span className={cn("font-medium tabular-nums", b.points >= 0 ? "text-success" : "text-destructive")}>{b.points >= 0 ? "+" : ""}{b.points}</span>
+                            </div>
+                          ))}
+                          <div className="flex items-center justify-between gap-2 border-t pt-1 font-semibold">
+                            <span>Total</span>
+                            <span className="tabular-nums">{m.points >= 0 ? "+" : ""}{m.points}</span>
+                          </div>
+                        </div>
+                      </details>
+                    )}
+                    <p className="mt-1 text-[11px] text-muted-foreground sm:ml-12">🔒 Locked in {lockedBefore(m.predictedAt, m.kickoff)}</p>
                   </div>
                 );
               })}
@@ -191,6 +215,18 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
       </Card>
     </div>
   );
+}
+
+// How long before kickoff the pick was locked in — picks can't be edited after
+// kickoff, so this is proof the prediction predates the match.
+function lockedBefore(predictedAt: Date | string, kickoff: Date | string): string {
+  const ms = +new Date(kickoff) - +new Date(predictedAt);
+  if (ms <= 60_000) return "right before kickoff";
+  const mins = Math.round(ms / 60_000);
+  if (mins < 60) return `${mins} min before kickoff`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 48) return `${hrs}h before kickoff`;
+  return `${Math.round(hrs / 24)}d before kickoff`;
 }
 
 function MiniStat({ label, value, hint }: { label: string; value: React.ReactNode; hint?: string }) {
