@@ -58,6 +58,21 @@ export interface NormalizedEvent {
   minute: number | null;
 }
 
+export interface NormalizedLineupPlayer {
+  playerApiId: number | null;
+  name: string;
+  number: number | null;
+  pos: string | null; // API single-letter: G | D | M | F
+  grid: string | null; // "row:col" used to place the player on the pitch
+}
+export interface NormalizedTeamLineup {
+  teamApiId: number | null;
+  formation: string | null;
+  startXI: NormalizedLineupPlayer[];
+  subs: NormalizedLineupPlayer[];
+  coach: string | null;
+}
+
 export interface FootballProvider {
   name: string;
   configured: boolean;
@@ -65,6 +80,7 @@ export interface FootballProvider {
   fetchTeams(): Promise<NormalizedTeam[]>;
   fetchSquad(apiTeamId: number): Promise<NormalizedSquadPlayer[]>;
   fetchEvents(apiFixtureId: number): Promise<NormalizedEvent[]>;
+  fetchLineups(apiFixtureId: number): Promise<NormalizedTeamLineup[]>;
 }
 
 const FINISHED = new Set(["FT", "AET", "PEN"]);
@@ -109,6 +125,7 @@ function notConfigured(): FootballProvider {
     fetchTeams: err,
     fetchSquad: err,
     fetchEvents: err,
+    fetchLineups: err,
   };
 }
 
@@ -233,6 +250,30 @@ function apiFootball(): FootballProvider {
         }
       }
       return out;
+    },
+
+    async fetchLineups(apiFixtureId: number) {
+      const { json } = await apiGet<{
+        team?: { id?: number | null };
+        formation?: string | null;
+        startXI?: { player?: { id?: number | null; name?: string | null; number?: number | null; pos?: string | null; grid?: string | null } }[];
+        substitutes?: { player?: { id?: number | null; name?: string | null; number?: number | null; pos?: string | null; grid?: string | null } }[];
+        coach?: { name?: string | null };
+      }>(`/fixtures/lineups?fixture=${encodeURIComponent(String(apiFixtureId))}`);
+      const mapP = (x: { player?: { id?: number | null; name?: string | null; number?: number | null; pos?: string | null; grid?: string | null } }): NormalizedLineupPlayer => ({
+        playerApiId: x.player?.id ?? null,
+        name: x.player?.name ?? "",
+        number: x.player?.number ?? null,
+        pos: x.player?.pos ?? null,
+        grid: x.player?.grid ?? null,
+      });
+      return (json.response ?? []).map((r) => ({
+        teamApiId: r.team?.id ?? null,
+        formation: r.formation ?? null,
+        startXI: (r.startXI ?? []).map(mapP).filter((p) => p.name),
+        subs: (r.substitutes ?? []).map(mapP).filter((p) => p.name),
+        coach: r.coach?.name ?? null,
+      }));
     },
   };
 }

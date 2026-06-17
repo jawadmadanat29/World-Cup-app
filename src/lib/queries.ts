@@ -985,6 +985,66 @@ export async function getMatchDetail(matchId: string) {
   };
 }
 
+// Live lineup + events for a single match — powers the in-play pitch view.
+export interface LineupSlot {
+  playerId: string | null;
+  name: string;
+  number: number | null;
+  pos: string | null;
+  grid: string | null;
+}
+export interface MatchLineup {
+  formation: string | null;
+  coach: string | null;
+  startXI: LineupSlot[];
+  subs: LineupSlot[];
+}
+export interface MatchLiveData {
+  status: string;
+  minute: number | null;
+  homeScore: number;
+  awayScore: number;
+  lineupHome: MatchLineup | null;
+  lineupAway: MatchLineup | null;
+  events: { id: string; type: string; minute: number | null; playerId: string | null; side: "HOME" | "AWAY" | null }[];
+}
+
+export async function getMatchLive(id: string): Promise<MatchLiveData | null> {
+  try {
+    return await queryMatchLive(id);
+  } catch {
+    // Degrade gracefully if the lineup columns aren't migrated yet.
+    return null;
+  }
+}
+
+async function queryMatchLive(id: string): Promise<MatchLiveData | null> {
+  const m = await prisma.match.findUnique({
+    where: { id },
+    select: {
+      status: true, liveHome: true, liveAway: true, liveMinute: true,
+      lineupHome: true, lineupAway: true, homeTeamId: true, awayTeamId: true,
+      events: { select: { id: true, type: true, minute: true, teamId: true, playerId: true } },
+    },
+  });
+  if (!m) return null;
+  return {
+    status: m.status,
+    minute: m.liveMinute,
+    homeScore: m.liveHome ?? 0,
+    awayScore: m.liveAway ?? 0,
+    lineupHome: (m.lineupHome as unknown as MatchLineup | null) ?? null,
+    lineupAway: (m.lineupAway as unknown as MatchLineup | null) ?? null,
+    events: m.events.map((e) => ({
+      id: e.id,
+      type: e.type,
+      minute: e.minute,
+      playerId: e.playerId,
+      side: e.teamId === m.homeTeamId ? "HOME" : e.teamId === m.awayTeamId ? "AWAY" : null,
+    })),
+  };
+}
+
 /** The match currently in play (kicked off, no result yet) for the home "live" card. */
 export async function getLiveComparison() {
   const now = new Date();

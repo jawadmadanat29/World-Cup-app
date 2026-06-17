@@ -196,6 +196,8 @@ model Match {
   liveHome   Int? // current home score (our orientation)
   liveAway   Int? // current away score (our orientation)
   liveMinute Int? // elapsed minutes from the API (status.elapsed)
+  lineupHome Json? // live starting XI + subs (home), set by sync while LIVE
+  lineupAway Json? // live starting XI + subs (away)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

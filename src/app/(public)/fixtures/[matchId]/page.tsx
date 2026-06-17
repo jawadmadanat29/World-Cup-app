@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Lock, MapPin, ArrowRight, Goal as GoalIcon, Square } from "lucide-react";
-import { getMatchDetail } from "@/lib/queries";
+import { getMatchDetail, getMatchLive } from "@/lib/queries";
+import { LineupPitch } from "@/components/domain/lineup-pitch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,8 @@ export default async function MatchPage({ params }: { params: Promise<{ matchId:
   if (!m) notFound();
 
   const completed = !!m.result;
+  const inPlay = m.lockState === "LOCKED"; // kicked off, no result yet
+  const live = inPlay ? await getMatchLive(matchId) : null;
   const stageLabel = m.stage === "GROUP" && m.groupCode ? `Group ${m.groupCode}` : STAGE_LABELS[m.stage as keyof typeof STAGE_LABELS] ?? m.stage;
 
   return (
@@ -72,6 +75,21 @@ export default async function MatchPage({ params }: { params: Promise<{ matchId:
           </div>
         </CardContent>
       </Card>
+
+      {/* Live lineups — in-play matches only */}
+      {live && (
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2 text-base"><GoalIcon className="h-4 w-4" /> Lineups</CardTitle></CardHeader>
+          <CardContent className="pt-0">
+            <LineupPitch
+              matchId={m.id}
+              initial={live}
+              home={m.home ? { name: m.home.name, iso: m.home.isoCode } : null}
+              away={m.away ? { name: m.away.name, iso: m.away.isoCode } : null}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Events */}
       {completed && m.events.length > 0 && (

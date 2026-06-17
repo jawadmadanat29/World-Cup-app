@@ -30,6 +30,9 @@ const SYNC_THROTTLE_MS = 45_000;
 // Cap how many /fixtures/events calls we make per run — keeps a 1-2 min cron
 // well within a 7,500/day quota even if several matches are live at once.
 const MAX_EVENT_FIXTURES_PER_RUN = 6;
+// Lineups are only fetched for live matches (one extra call each) — bounded by
+// how many games are in play at once, so this stays cheap on quota.
+const MAX_LINEUP_FIXTURES_PER_RUN = 4;
 // Only pull events for matches that are live or finished within this window. A
 // long-finished match's events never change, so re-fetching them every run just
 // burns quota (this was the main cause of blowing past the daily limit).
@@ -249,11 +252,43 @@ export async function runSync({ force = false }: { force?: boolean } = {}): Prom
       }
     }
 
+    // ---- Lineups (live matches only) — quota-capped ------------------------
+    let lineupsSynced = 0;
+    const liveCandidates = eventCandidates.filter((c) => c.live).slice(0, MAX_LINEUP_FIXTURES_PER_RUN);
+    if (liveCandidates.length) {
+      const players = await prisma.player.findMany({ where: { apiPlayerId: { not: null } }, select: { id: true, apiPlayerId: true } });
+      const byApiPlayerId = new Map(players.map((p) => [p.apiPlayerId!, p.id]));
+      const matchById = new Map(matches.map((m) => [m.id, m]));
+      const toStored = (tl: Awaited<ReturnType<typeof provider.fetchLineups>>[number]) => ({
+        formation: tl.formation,
+        coach: tl.coach,
+        startXI: tl.startXI.map((p) => ({ playerId: p.playerApiId != null ? byApiPlayerId.get(p.playerApiId) ?? null : null, name: p.name, number: p.number, pos: p.pos, grid: p.grid })),
+        subs: tl.subs.map((p) => ({ playerId: p.playerApiId != null ? byApiPlayerId.get(p.playerApiId) ?? null : null, name: p.name, number: p.number, pos: p.pos, grid: p.grid })),
+      });
+      for (const c of liveCandidates) {
+        const m = matchById.get(c.matchId);
+        if (!m) continue;
+        const teamLineups = await provider.fetchLineups(c.apiFixtureId);
+        if (!teamLineups.length) continue;
+        const data: Record<string, unknown> = {};
+        for (const tl of teamLineups) {
+          const ourTeamId = tl.teamApiId != null ? byApiTeamId.get(tl.teamApiId) ?? null : null;
+          if (ourTeamId && ourTeamId === m.homeTeamId) data.lineupHome = toStored(tl);
+          else if (ourTeamId && ourTeamId === m.awayTeamId) data.lineupAway = toStored(tl);
+        }
+        if (Object.keys(data).length) {
+          await prisma.match.update({ where: { id: m.id }, data });
+          lineupsSynced++;
+        }
+      }
+    }
+
     await recomputeEverything();
 
     const parts = [`Updated ${updated} result${updated === 1 ? "" : "s"} (matched ${matched}, manual kept ${skippedManual}, unmatched ${unmatched}).`];
     if (koFilled) parts.push(`Filled ${koFilled} knockout match-up${koFilled === 1 ? "" : "s"}.`);
     if (eventsSynced) parts.push(`Synced events for ${eventsSynced} live/recent match${eventsSynced === 1 ? "" : "es"}.`);
+    if (lineupsSynced) parts.push(`Synced lineups for ${lineupsSynced} live match${lineupsSynced === 1 ? "" : "es"}.`);
     const summary = parts.join(" ");
 
     await prisma.syncState.update({
