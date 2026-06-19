@@ -1,6 +1,6 @@
 "use server";
 import { prisma } from "@/lib/db";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdmin, hashPassword } from "@/lib/auth";
 import { participantSchema } from "@/lib/validation";
 import { initialsOf } from "@/lib/format";
 import { writeAudit } from "@/lib/audit";
@@ -65,5 +65,21 @@ export async function deleteParticipant(id: string): Promise<ActionResult> {
     return ok(`Removed ${p.name}.`);
   } catch (e) {
     return fail(e instanceof Error ? e.message : "Could not delete participant.");
+  }
+}
+
+// Owner-only password reset — passwords are scrypt-hashed and can't be recovered,
+// so a forgotten password is reset to a new temporary one the player then changes.
+export async function resetParticipantPassword(id: string, newPassword: string): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    if (!newPassword || newPassword.length < 6) return fail("Password must be at least 6 characters.");
+    const p = await prisma.participant.findUnique({ where: { id }, select: { name: true } });
+    if (!p) return fail("Participant not found.");
+    await prisma.participant.update({ where: { id }, data: { passwordHash: hashPassword(newPassword) } });
+    await writeAudit({ action: "UPDATE", entity: "participant", entityId: id, summary: `Reset password for ${p.name}.` });
+    return ok(`Password reset for ${p.name}. Share the temporary password with them.`);
+  } catch (e) {
+    return fail(e instanceof Error ? e.message : "Could not reset password.");
   }
 }

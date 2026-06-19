@@ -2,8 +2,8 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2 } from "lucide-react";
-import { saveParticipant, deleteParticipant, type ParticipantInput } from "@/actions/admin-participants";
+import { Plus, Pencil, Trash2, KeyRound } from "lucide-react";
+import { saveParticipant, deleteParticipant, resetParticipantPassword, type ParticipantInput } from "@/actions/admin-participants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,6 +43,17 @@ export function ParticipantManager({ participants, teams }: { participants: Part
     });
   }
 
+  function resetPw(p: ParticipantLite) {
+    const pw = window.prompt(`New temporary password for ${p.name} (min 6 characters).\nShare it with them — they can change it after signing in.`);
+    if (pw == null) return; // cancelled
+    if (pw.length < 6) { toast.error("Password must be at least 6 characters."); return; }
+    start(async () => {
+      const res = await resetParticipantPassword(p.id, pw);
+      if (res.ok) toast.success(res.message);
+      else toast.error(res.message);
+    });
+  }
+
   function remove(p: ParticipantLite) {
     if (!window.confirm(`Remove ${p.name} and all their predictions? This cannot be undone.`)) return;
     start(async () => {
@@ -68,6 +79,7 @@ export function ParticipantManager({ participants, teams }: { participants: Part
             </div>
             {p.favoriteTeamId && teamMap.get(p.favoriteTeamId) && <TeamChip team={teamMap.get(p.favoriteTeamId)!} />}
             <Button variant="ghost" size="icon" onClick={() => openEdit(p)} aria-label="Edit"><Pencil className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon" onClick={() => resetPw(p)} aria-label="Reset password" disabled={pending}><KeyRound className="h-4 w-4" /></Button>
             <Button variant="ghost" size="icon" onClick={() => remove(p)} aria-label="Delete" disabled={pending}><Trash2 className="h-4 w-4 text-destructive" /></Button>
           </div>
         )) : <p className="px-4 py-8 text-center text-sm text-muted-foreground">No participants yet. Add your first friend.</p>}
