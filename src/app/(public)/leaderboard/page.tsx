@@ -1,15 +1,12 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Activity } from "lucide-react";
 import { getLeaderboard, getTeamMap, getLatestPredictions } from "@/lib/queries";
 import { getCurrentParticipantId } from "@/lib/auth";
 import { PageHeader } from "@/components/domain/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ParticipantAvatar, FavoriteFlag } from "@/components/domain/participant-avatar";
-import { Movement } from "@/components/domain/movement";
 import { EmptyState } from "@/components/domain/empty-state";
 import { ActivityFeed } from "@/components/domain/activity-feed";
-import { cn } from "@/lib/utils";
+import { LeaderboardList } from "@/components/domain/leaderboard-list";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Leaderboard" };
@@ -17,35 +14,14 @@ export const metadata: Metadata = { title: "Leaderboard" };
 export default async function LeaderboardPage() {
   const [rows, teamMap, meId] = await Promise.all([getLeaderboard(), getTeamMap(), getCurrentParticipantId()]);
   const feed = await getLatestPredictions(30, rows);
-  const favIso = (id: string | null) => (id ? teamMap.get(id)?.isoCode ?? null : null);
+  const favIso: Record<string, string | null> = Object.fromEntries([...teamMap.values()].map((t) => [t.id, t.isoCode]));
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Leaderboard" description="Live standings across the league. Tap a player for their full profile." eyebrow="Standings" />
+      <PageHeader title="Leaderboard" description="Live standings. Tap a row for the points breakdown, or a name for the full profile." eyebrow="Standings" />
 
       {rows.length ? (
-        <Card className="divide-y">
-          {rows.map((row) => {
-            const me = row.participant.id === meId;
-            return (
-              <Link
-                key={row.participant.id}
-                href={`/participants/${row.participant.id}`}
-                className={cn("flex items-center gap-3 px-3 py-3 transition-colors hover:bg-muted/40", me && "bg-primary/5")}
-              >
-                <span className={cn("w-6 text-center text-sm font-bold tabular-nums", row.rank === 1 ? "text-gold" : "text-muted-foreground")}>{row.rank}</span>
-                <Movement value={row.movement} className="hidden w-8 sm:flex" />
-                <ParticipantAvatar initials={row.participant.initials} color={row.participant.accentColor} avatarId={row.participant.avatarId} size="sm" />
-                <span className="flex min-w-0 flex-1 items-center gap-1.5">
-                  <span className="truncate font-medium">{row.participant.nickname || row.participant.name}</span>
-                  <FavoriteFlag iso={favIso(row.participant.favoriteTeamId)} />
-                  {me && <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-primary">You</span>}
-                </span>
-                <span className="font-mono text-base font-bold tabular-nums">{row.total}</span>
-              </Link>
-            );
-          })}
-        </Card>
+        <LeaderboardList rows={rows} meId={meId} favIso={favIso} />
       ) : (
         <EmptyState title="No players yet" description="Invite friends to join your league." />
       )}

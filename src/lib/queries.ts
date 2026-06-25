@@ -1342,7 +1342,31 @@ export async function getPublicProfile(id: string) {
     scoredMatches: stats.scoredMatches,
   });
 
-  return { participant, row, favorite, avgTotal, leaderboardSize: leaderboard.length, matchStats: { revealed: revealedMatches.length, hidden: hiddenMatches }, revealedMatches, tournament, stats, achievements };
+  // --- full, itemised points ledger so every point is auditable ---
+  const [groupTxns, koTxns, awardTxns, adjustments, allGroups] = await Promise.all([
+    prisma.pointTransaction.findMany({ where: { participantId: id, category: "GROUP" }, orderBy: [{ groupId: "asc" }, { points: "desc" }] }),
+    prisma.pointTransaction.findMany({ where: { participantId: id, category: { in: ["KNOCKOUT_PRE", "KNOCKOUT_STAGE", "TOURNAMENT"] } }, orderBy: { points: "desc" } }),
+    prisma.pointTransaction.findMany({ where: { participantId: id, category: "AWARD" } }),
+    prisma.adminAdjustment.findMany({ where: { participantId: id }, orderBy: { createdAt: "desc" } }),
+    prisma.group.findMany({ select: { id: true, code: true } }),
+  ]);
+  const groupCode = new Map(allGroups.map((g) => [g.id, g.code]));
+  const sumPts = (arr: { points: number }[]) => arr.reduce((s, t) => s + t.points, 0);
+  const pointsAudit = {
+    matchSubtotal: (row?.byCategory.MATCH ?? 0) + (row?.byCategory.WILDCARD ?? 0),
+    wildcardSubtotal: row?.byCategory.WILDCARD ?? 0,
+    group: groupTxns.map((t) => ({ groupCode: t.groupId ? groupCode.get(t.groupId) ?? null : null, team: tn(t.refId), reason: t.reason, points: t.points })),
+    groupSubtotal: sumPts(groupTxns),
+    knockout: koTxns.map((t) => ({ team: tn(t.refId), reason: t.reason, points: t.points })),
+    knockoutSubtotal: sumPts(koTxns),
+    awards: awardTxns.map((t) => ({ reason: t.reason, points: t.points })),
+    awardSubtotal: sumPts(awardTxns),
+    adjustments: adjustments.map((a) => ({ reason: a.reason, points: a.points })),
+    adjustmentSubtotal: sumPts(adjustments),
+    total: row?.total ?? 0,
+  };
+
+  return { participant, row, favorite, avgTotal, leaderboardSize: leaderboard.length, matchStats: { revealed: revealedMatches.length, hidden: hiddenMatches }, revealedMatches, tournament, stats, achievements, pointsAudit };
 }
 
 // Head-to-head comparison (Phase 2.1). Privacy: the VIEWER's own picks always

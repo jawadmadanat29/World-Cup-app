@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Trophy, Target, TrendingUp, Lock, Sparkles, MessageSquare, GitCompareArrows, Award, Flame, Percent } from "lucide-react";
+import { Trophy, Target, TrendingUp, Lock, Sparkles, MessageSquare, GitCompareArrows, Award, Flame, Percent, ListChecks } from "lucide-react";
 import { getPublicProfile } from "@/lib/queries";
 import { getCurrentParticipantId } from "@/lib/auth";
 import { PageHeader } from "@/components/domain/page-header";
@@ -27,7 +27,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
   const { id } = await params;
   const [profile, viewerId] = await Promise.all([getPublicProfile(id), getCurrentParticipantId()]);
   if (!profile) notFound();
-  const { participant, row, favorite, avgTotal, leaderboardSize, matchStats, revealedMatches, tournament, stats, achievements } = profile;
+  const { participant, row, favorite, avgTotal, leaderboardSize, matchStats, revealedMatches, tournament, stats, achievements, pointsAudit } = profile;
   const diff = row ? Math.round(row.total - avgTotal) : 0;
   const canCompare = !!viewerId && viewerId !== id;
 
@@ -75,6 +75,47 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
           <MiniStat label="Best matchday" value={stats.bestMatchday ? `+${stats.bestMatchday.points}` : "—"} hint={stats.bestMatchday?.label ?? "—"} />
           <MiniStat label="Worst matchday" value={stats.worstMatchday ? `+${stats.worstMatchday.points}` : "—"} hint={stats.worstMatchday?.label ?? "—"} />
           <MiniStat label="Wildcards used" value={stats.wildcardsUsed} hint="of the tournament" />
+        </CardContent>
+      </Card>
+
+      {/* Points audit — every point, where it comes from */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base"><ListChecks className="h-4 w-4" /> Points audit</CardTitle>
+          <p className="text-xs text-muted-foreground">Every point, itemised — so anyone can check the maths.</p>
+        </CardHeader>
+        <CardContent className="space-y-3 pt-1 text-sm">
+          <div>
+            <div className="flex items-center justify-between font-medium">
+              <span>Match predictions</span>
+              <span className="font-mono font-semibold tabular-nums">+{pointsAudit.matchSubtotal}</span>
+            </div>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Itemised match-by-match below{pointsAudit.wildcardSubtotal ? ` · includes +${pointsAudit.wildcardSubtotal} from wildcards` : ""}.
+            </p>
+          </div>
+
+          <AuditSection title="Group stage" subtotal={pointsAudit.groupSubtotal}
+            items={pointsAudit.group.map((g) => ({
+              label: `${[g.groupCode ? `Group ${g.groupCode}` : null, g.team?.shortName].filter(Boolean).join(" · ")} — ${cleanReason(g.reason)}`,
+              points: g.points,
+            }))} />
+
+          <AuditSection title="Tournament bracket" subtotal={pointsAudit.knockoutSubtotal}
+            items={pointsAudit.knockout.map((k) => ({ label: `${k.team?.shortName ?? ""} — ${cleanReason(k.reason)}`, points: k.points }))} />
+
+          <AuditSection title="Player awards" subtotal={pointsAudit.awardSubtotal}
+            items={pointsAudit.awards.map((a) => ({ label: cleanReason(a.reason), points: a.points }))} />
+
+          {pointsAudit.adjustments.length > 0 && (
+            <AuditSection title="Manual adjustments" subtotal={pointsAudit.adjustmentSubtotal} alwaysShow
+              items={pointsAudit.adjustments.map((a) => ({ label: a.reason, points: a.points }))} />
+          )}
+
+          <div className="flex items-center justify-between border-t pt-2 text-base font-bold">
+            <span>Total</span>
+            <span className="font-mono tabular-nums">{pointsAudit.total}</span>
+          </div>
         </CardContent>
       </Card>
 
@@ -227,6 +268,39 @@ function lockedBefore(predictedAt: Date | string, kickoff: Date | string): strin
   const hrs = Math.round(mins / 60);
   if (hrs < 48) return `${hrs}h before kickoff`;
   return `${Math.round(hrs / 24)}d before kickoff`;
+}
+
+function cleanReason(r: string): string {
+  return r.replace(/\s*\([+-]?\d+\)\s*$/, "");
+}
+
+function AuditSection({ title, subtotal, items, alwaysShow }: { title: string; subtotal: number; items: { label: string; points: number }[]; alwaysShow?: boolean }) {
+  if (!items.length && !alwaysShow) {
+    return (
+      <div className="flex items-center justify-between text-muted-foreground">
+        <span>{title}</span>
+        <span className="font-mono tabular-nums">+0</span>
+      </div>
+    );
+  }
+  return (
+    <div>
+      <div className="flex items-center justify-between font-medium">
+        <span>{title}</span>
+        <span className="font-mono font-semibold tabular-nums">{subtotal >= 0 ? "+" : ""}{subtotal}</span>
+      </div>
+      {items.length > 0 && (
+        <div className="mt-1 space-y-0.5 rounded-md bg-muted/40 px-3 py-2 text-xs">
+          {items.map((it, i) => (
+            <div key={i} className="flex items-center justify-between gap-2">
+              <span className="text-muted-foreground">{it.label}</span>
+              <span className={cn("font-medium tabular-nums", it.points >= 0 ? "text-success" : "text-destructive")}>{it.points >= 0 ? "+" : ""}{it.points}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function MiniStat({ label, value, hint }: { label: string; value: React.ReactNode; hint?: string }) {
