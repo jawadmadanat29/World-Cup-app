@@ -1,6 +1,8 @@
 import "server-only";
+import { unstable_cache } from "next/cache";
 import { subDays } from "date-fns";
 import { prisma } from "@/lib/db";
+import { READ_CACHE_TAG } from "@/lib/revalidate";
 import { getConfig } from "@/lib/settings";
 import { matchLockState, sectionLockState, isLocked } from "@/lib/locking";
 import { groupMatchdays, currentMatchdayKey } from "@/lib/matchday";
@@ -55,11 +57,13 @@ export interface LeaderboardRow {
   movement: number; // +up / -down / 0
 }
 
-export async function getLeaderboard(): Promise<LeaderboardRow[]> {
+async function leaderboardImpl(): Promise<LeaderboardRow[]> {
   const [participants, txns, adjustments, tourPreds] = await Promise.all([
     getParticipants(),
-    prisma.pointTransaction.findMany(),
-    prisma.adminAdjustment.findMany(),
+    // Only the columns the tally below reads — skips long `reason`/`dedupeKey`
+    // strings, ids and timestamps, which is the bulk of this (the largest) table.
+    prisma.pointTransaction.findMany({ select: { participantId: true, category: true, points: true, matchId: true, source: true } }),
+    prisma.adminAdjustment.findMany({ select: { participantId: true, points: true } }),
     prisma.participantTournamentPrediction.findMany({ select: { participantId: true, submittedAt: true } }),
   ]);
 
@@ -139,6 +143,15 @@ export async function getLeaderboard(): Promise<LeaderboardRow[]> {
   rows.sort((a, b) => a.rank - b.rank || b.total - a.total);
   return rows;
 }
+
+// Cached across all visitors so a burst of refreshes (e.g. everyone watching a
+// live match) collapses to one DB read per window instead of one per request.
+// Viewer-independent; the "you" highlight is applied per-request in the page.
+// Busted immediately on any write via revalidateTag; otherwise self-heals.
+export const getLeaderboard = unstable_cache(leaderboardImpl, ["leaderboard"], {
+  revalidate: 60,
+  tags: [READ_CACHE_TAG],
+});
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -1070,7 +1083,7 @@ export interface FeedEvent {
   at: Date;
 }
 
-export async function getLatestPredictions(limit = 15, leaderboard?: LeaderboardRow[]): Promise<FeedEvent[]> {
+async function latestPredictionsImpl(limit = 15, leaderboard?: LeaderboardRow[]): Promise<FeedEvent[]> {
   const [config, participants, teamMap] = await Promise.all([getConfig(), getParticipants(), getTeamMap()]);
   const pmap = new Map(participants.map((p) => [p.id, p]));
   const now = new Date();
@@ -1195,9 +1208,18 @@ export async function getLatestPredictions(limit = 15, leaderboard?: Leaderboard
   return events.sort((a, b) => +b.at - +a.at).slice(0, limit);
 }
 
+// Cached read. Lock-gated reveals stay safe: a frozen entry can only ever delay
+// a reveal (a not-yet-locked snapshot shows "made a pick", never the contents),
+// never expose one early. Call without the leaderboard arg so the cache key is
+// stable; it falls back to the cached getLeaderboard() internally.
+export const getLatestPredictions = unstable_cache(latestPredictionsImpl, ["latest-predictions"], {
+  revalidate: 45,
+  tags: [READ_CACHE_TAG],
+});
+
 // Privacy-aware public profile (spec §8). Match predictions are revealed only
 // after each match locks; the tournament forecast only after the first kickoff.
-export async function getPublicProfile(id: string) {
+async function publicProfileImpl(id: string) {
   const participant = await prisma.participant.findUnique({ where: { id } });
   if (!participant) return null;
   const [leaderboard, teamMap, playerMap, config, tourDeadline] = await Promise.all([
@@ -1368,6 +1390,14 @@ export async function getPublicProfile(id: string) {
 
   return { participant, row, favorite, avgTotal, leaderboardSize: leaderboard.length, matchStats: { revealed: revealedMatches.length, hidden: hiddenMatches }, revealedMatches, tournament, stats, achievements, pointsAudit };
 }
+
+// Cached per participant id (the id arg is part of the cache key). This page
+// re-reads several large transaction sets; caching it collapses repeat profile
+// views. Lock-gated reveals only ever delay, never leak early (see feed note).
+export const getPublicProfile = unstable_cache(publicProfileImpl, ["public-profile"], {
+  revalidate: 60,
+  tags: [READ_CACHE_TAG],
+});
 
 // Head-to-head comparison (Phase 2.1). Privacy: the VIEWER's own picks always
 // show; the RIVAL's tournament forecast is revealed only after the first kickoff,

@@ -283,7 +283,13 @@ export async function runSync({ force = false }: { force?: boolean } = {}): Prom
       }
     }
 
-    await recomputeEverything();
+    // Only recompute when this run actually changed scoring inputs (a new/updated
+    // result, a freshly-filled knockout match-up, or live/recent events). Idle
+    // ticks — the vast majority over a 6-week tournament — would otherwise re-read
+    // every prediction + transaction in the DB on every cron firing for nothing,
+    // which was the single biggest source of Supabase egress.
+    const scoringChanged = updated > 0 || koFilled > 0 || eventsSynced > 0;
+    if (scoringChanged) await recomputeEverything();
 
     const parts = [`Updated ${updated} result${updated === 1 ? "" : "s"} (matched ${matched}, manual kept ${skippedManual}, unmatched ${unmatched}).`];
     if (koFilled) parts.push(`Filled ${koFilled} knockout match-up${koFilled === 1 ? "" : "s"}.`);

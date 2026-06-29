@@ -13,7 +13,8 @@ export const metadata: Metadata = { title: "Leaderboard" };
 
 export default async function LeaderboardPage() {
   const [rows, teamMap, meId] = await Promise.all([getLeaderboard(), getTeamMap(), getCurrentParticipantId()]);
-  const feed = await getLatestPredictions(30, rows);
+  // No rows arg → stable cache key; the feed reuses the cached leaderboard internally.
+  const feed = await getLatestPredictions(30);
   const favIso: Record<string, string | null> = Object.fromEntries([...teamMap.values()].map((t) => [t.id, t.isoCode]));
 
   return (
