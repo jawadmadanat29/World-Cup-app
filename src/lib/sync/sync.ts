@@ -107,7 +107,17 @@ export async function runSync({ force = false }: { force?: boolean } = {}): Prom
 
     // ---- Index our matches -----------------------------------------------
     const matches = await prisma.match.findMany({
-      include: { result: { select: { source: true } } },
+      include: {
+        result: {
+          select: {
+            source: true,
+            ftHome: true, ftAway: true, decisiveScore: true,
+            wentToExtraTime: true, aetHome: true, aetAway: true,
+            wentToPenalties: true, pensHome: true, pensAway: true,
+            advancingTeamId: true,
+          },
+        },
+      },
     });
     const pairKey = (a: string, b: string) => [a, b].sort().join("|");
     const byApiFixtureId = new Map<number, (typeof matches)[number]>();
@@ -198,22 +208,41 @@ export async function runSync({ force = false }: { force?: boolean } = {}): Prom
                 ? ourPensHome > ourPensAway ? mHomeTeamId : mAwayTeamId
                 : null;
 
-          await prisma.matchResult.upsert({
-            where: { matchId: m.id },
-            create: {
-              matchId: m.id, ftHome: ourHomeGoals, ftAway: ourAwayGoals, decisiveScore: decisive, source: "API",
-              wentToExtraTime: decisive !== "FT", aetHome: ourAetHome, aetAway: ourAetAway,
-              wentToPenalties: decisive === "PENS", pensHome: ourPensHome, pensAway: ourPensAway,
-              advancingTeamId: advancing,
-            },
-            update: {
-              ftHome: ourHomeGoals, ftAway: ourAwayGoals, decisiveScore: decisive, source: "API",
-              wentToExtraTime: decisive !== "FT", aetHome: ourAetHome, aetAway: ourAetAway,
-              wentToPenalties: decisive === "PENS", pensHome: ourPensHome, pensAway: ourPensAway,
-              advancingTeamId: advancing,
-            },
-          });
-          updated++;
+          // Only write when the result actually differs from what's stored.
+          // Re-upserting an unchanged result on every tick was tripping the
+          // recompute gate below, forcing a full predictions/points re-read
+          // (~720×/day) — the dominant source of Supabase egress.
+          const r = m.result;
+          const same =
+            r != null && r.source === "API" &&
+            r.ftHome === ourHomeGoals && r.ftAway === ourAwayGoals &&
+            r.decisiveScore === decisive &&
+            r.wentToExtraTime === (decisive !== "FT") &&
+            (r.aetHome ?? null) === (ourAetHome ?? null) &&
+            (r.aetAway ?? null) === (ourAetAway ?? null) &&
+            r.wentToPenalties === (decisive === "PENS") &&
+            (r.pensHome ?? null) === (ourPensHome ?? null) &&
+            (r.pensAway ?? null) === (ourPensAway ?? null) &&
+            (r.advancingTeamId ?? null) === (advancing ?? null);
+
+          if (!same) {
+            await prisma.matchResult.upsert({
+              where: { matchId: m.id },
+              create: {
+                matchId: m.id, ftHome: ourHomeGoals, ftAway: ourAwayGoals, decisiveScore: decisive, source: "API",
+                wentToExtraTime: decisive !== "FT", aetHome: ourAetHome, aetAway: ourAetAway,
+                wentToPenalties: decisive === "PENS", pensHome: ourPensHome, pensAway: ourPensAway,
+                advancingTeamId: advancing,
+              },
+              update: {
+                ftHome: ourHomeGoals, ftAway: ourAwayGoals, decisiveScore: decisive, source: "API",
+                wentToExtraTime: decisive !== "FT", aetHome: ourAetHome, aetAway: ourAetAway,
+                wentToPenalties: decisive === "PENS", pensHome: ourPensHome, pensAway: ourPensAway,
+                advancingTeamId: advancing,
+              },
+            });
+            updated++;
+          }
         }
       }
 
