@@ -25,14 +25,20 @@ const ALIASES: Record<string, string> = {
   bosniaherzegovina: "BIH", bosniaandherzegovina: "BIH", curacao: "CUW",
 };
 
-// Below 60s so a 1-minute cron's jitter never trips the throttle and skips a run.
-const SYNC_THROTTLE_MS = 45_000;
-// Cap how many /fixtures/events calls we make per run — keeps a 1-2 min cron
-// well within a 7,500/day quota even if several matches are live at once.
+// Free-tier API budget (~100 calls/day): let real syncs run at most ~every
+// 30 min. The admin "Sync now" button passes force and bypasses this.
+const SYNC_THROTTLE_MS = 30 * 60 * 1000;
+// Cap how many /fixtures/events calls we make per run.
 const MAX_EVENT_FIXTURES_PER_RUN = 6;
-// Lineups are only fetched for live matches (one extra call each) — bounded by
-// how many games are in play at once, so this stays cheap on quota.
-const MAX_LINEUP_FIXTURES_PER_RUN = 4;
+// Lineups are a live-only UI extra (not used for scoring). Disabled on the free
+// tier to save API calls; set back to a small number to re-enable live lineups.
+const MAX_LINEUP_FIXTURES_PER_RUN = 0;
+// Results-only gate: only hit the external API when a match actually needs a
+// result — from just before kickoff until we've recorded it COMPLETED. A match
+// whose kickoff is older than this and still isn't COMPLETED ages out, so we
+// never poll forever on one the API never resolves. Most of the day: 0 calls.
+const RESULT_LOOKBACK_MS = 12 * 60 * 60 * 1000;
+const PRE_KICKOFF_MS = 10 * 60 * 1000;
 // Only pull events for matches that are live or finished within this window. A
 // long-finished match's events never change, so re-fetching them every run just
 // burns quota (this was the main cause of blowing past the daily limit).
@@ -51,11 +57,10 @@ export async function runSync({ force = false }: { force?: boolean } = {}): Prom
   const provider = getProvider();
   const state = await prisma.syncState.findUnique({ where: { id: "default" } });
 
-  // Throttle to protect API quota (manual button passes force).
+  // Throttle to protect API quota (manual button passes force). Return silently
+  // without touching the DB so a fast external cron can't rack up writes/egress.
   if (!force && state?.lastSyncAt && Date.now() - state.lastSyncAt.getTime() < SYNC_THROTTLE_MS) {
-    const out = { status: "SKIPPED", summary: "Skipped — synced moments ago." };
-    await recordLog(out);
-    return out;
+    return { status: "SKIPPED", summary: "Skipped — synced moments ago." };
   }
 
   if (!provider.configured) {
@@ -67,6 +72,31 @@ export async function runSync({ force = false }: { force?: boolean } = {}): Prom
     });
     await recordLog(out);
     return out;
+  }
+
+  // Results-only gate: skip the API entirely unless some match needs a result
+  // right now (kicked off / about to, within the lookback, not yet COMPLETED and
+  // not admin-entered). We still mark lastSyncAt so this idle check itself only
+  // runs on the throttle interval, not on every cron tick.
+  if (!force) {
+    const now = Date.now();
+    const needy = await prisma.match.findFirst({
+      where: {
+        kickoff: { lte: new Date(now + PRE_KICKOFF_MS), gte: new Date(now - RESULT_LOOKBACK_MS) },
+        status: { not: "COMPLETED" },
+        OR: [{ result: { is: null } }, { result: { source: { not: "ADMIN" } } }],
+      },
+      select: { id: true },
+    });
+    if (!needy) {
+      const out = { status: "SKIPPED", summary: "Idle — no match needs syncing right now." };
+      await prisma.syncState.upsert({
+        where: { id: "default" },
+        create: { id: "default", status: "OK", lastSyncAt: new Date(), lastSummary: out.summary },
+        update: { status: "OK", lastSyncAt: new Date(), lastSummary: out.summary },
+      });
+      return out;
+    }
   }
 
   await prisma.syncState.upsert({

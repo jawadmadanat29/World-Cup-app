@@ -20,7 +20,12 @@ async function authorized(req: Request): Promise<boolean> {
 
 async function handle(req: Request) {
   if (!(await authorized(req))) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const out = await runSync({ force: true });
+  // Scheduled cron hits this without params → respects the throttle + results-only
+  // gate (only calls the external API around an actual game). Pass ?force=1 to
+  // force a full sync now; the admin "Sync now" button uses a server action that
+  // always forces, so it is unaffected by this.
+  const force = new URL(req.url).searchParams.get("force") === "1";
+  const out = await runSync({ force });
   // Always 200 so an unattended scheduler (cron-job.org) never auto-disables the
   // job over a transient failure like an exhausted daily quota — the run's real
   // outcome is in the body and on the admin sync page, and it self-heals next run.
