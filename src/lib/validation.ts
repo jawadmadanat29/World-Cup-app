@@ -27,6 +27,12 @@ const optStr = z.preprocess(
   z.string().optional(),
 );
 
+// Match minute — allows extra time / stoppage (regulation goes past 90, ET to 120+).
+const optMinute = z.preprocess(
+  (v) => (v === "" || v === null || v === undefined ? undefined : Number(v)),
+  z.number().int().min(0).max(130).optional(),
+);
+
 // ---------------------------------------------------------------------------
 
 export const loginSchema = z.object({
@@ -94,7 +100,7 @@ export const matchEventSchema = z.object({
   type: z.enum(tuple(EVENT_TYPES)),
   teamId: optStr,
   playerId: optStr,
-  minute: optInt,
+  minute: optMinute,
   relatedPlayerId: optStr,
 });
 
