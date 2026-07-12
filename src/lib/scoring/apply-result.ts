@@ -47,6 +47,25 @@ export async function applyResult(d: ResultEntryInput, actor = "admin") {
     prisma.match.update({ where: { id: d.matchId }, data: { status: d.status } }),
   ]);
 
+  // Advance the winner (and loser, for the third-place playoff) into any
+  // downstream bracket slots wired to this match, so the next round's fixtures
+  // populate automatically. The API used to do this; on the free tier we don't
+  // sync, so we propagate here from the entered advancingTeamId.
+  if (d.advancingTeamId) {
+    const winnerId = d.advancingTeamId;
+    const loserId = match.homeTeamId === winnerId ? match.awayTeamId : match.homeTeamId;
+    const downstream = await prisma.match.findMany({
+      where: { OR: [{ homeSourceMatchId: d.matchId }, { awaySourceMatchId: d.matchId }] },
+      select: { id: true, homeSourceMatchId: true, awaySourceMatchId: true, homeSourceType: true, awaySourceType: true },
+    });
+    for (const nx of downstream) {
+      const data: { homeTeamId?: string | null; awayTeamId?: string | null } = {};
+      if (nx.homeSourceMatchId === d.matchId) data.homeTeamId = nx.homeSourceType === "loser" ? loserId : winnerId;
+      if (nx.awaySourceMatchId === d.matchId) data.awayTeamId = nx.awaySourceType === "loser" ? loserId : winnerId;
+      if (Object.keys(data).length) await prisma.match.update({ where: { id: nx.id }, data });
+    }
+  }
+
   const counts = await recomputeEverything();
   await writeAudit({
     actor,
